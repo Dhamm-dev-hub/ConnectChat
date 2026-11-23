@@ -127,17 +127,23 @@ function setOnlineStatus(uid) {
   const statusRef = ref(realtimeDB, "status/" + uid);
   const connectedRef = ref(realtimeDB, ".info/connected");
 
-  onValue(connectedRef, (snapshot) => {
+  onValue(connectedRef, async (snapshot) => {
     if (snapshot.val() === true) {
-      onDisconnect(statusRef).set({
-        state: "offline",
-        lastChanged: Date.now()
-      });
+      try {
+        await onDisconnect(statusRef).set({
+          state: "offline",
+          lastChanged: Date.now()
+        });
 
-      set(statusRef, {
-        state: "online",
-        lastChanged: Date.now()
-      });
+        await set(statusRef, {
+          state: "online",
+          lastChanged: Date.now()
+        });
+
+        console.log("Online status set successfully");
+      } catch (error) {
+        console.error("Status error:", error);
+      }
     }
   });
     }
