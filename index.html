@@ -15,8 +15,8 @@ button{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-size:15p
 .card{background:white;border-radius:12px;padding:16px;margin-bottom:15px;box-shadow:0 2px 8px #0001}
 h2,h3{color:#075e54;margin-bottom:10px}
 #searchInput{width:100%;padding:13px;border:1px solid #ddd;border-radius:9px;font-size:16px;margin:12px 0}
-.user{padding:15px;border-bottom:1px solid #eee;cursor:pointer}
-.user:hover{background:#f3f8f7}
+.user,.chatItem{padding:14px;border-bottom:1px solid #eee;cursor:pointer}
+.user:hover,.chatItem:hover{background:#f3f8f7}
 .userName{font-weight:bold;color:#075e54;font-size:17px}
 .status{text-align:center;padding:15px;color:#777}
 #chatView{display:none}
@@ -27,12 +27,15 @@ h2,h3{color:#075e54;margin-bottom:10px}
 .msg{max-width:80%;padding:10px 12px;border-radius:12px;overflow-wrap:anywhere}
 .mine{align-self:flex-end;background:#d5f5dc}
 .theirs{align-self:flex-start;background:white}
-.msgName{font-size:12px;color:#666;margin-bottom:4px}
 #sendForm{display:flex;gap:8px}
 #messageInput{flex:1;min-width:0;padding:12px;border:1px solid #ddd;border-radius:9px;font-size:16px}
 #sendBtn{background:#075e54;color:white;font-weight:bold}
 #sendBtn:disabled{opacity:.5}
 #chatError{color:#c00;font-size:13px;margin-top:8px}
+.chatItem{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.chatDetails{min-width:0;flex:1}
+.chatPreview{font-size:14px;color:#777;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chatTime{font-size:12px;color:#888;white-space:nowrap}
 footer{text-align:center;color:#888;padding:18px;font-size:13px}
 </style>
 </head>
@@ -44,10 +47,17 @@ footer{text-align:center;color:#888;padding:18px;font-size:13px}
 
 <main class="container">
 <div id="listView">
+
 <div class="card">
 <h2>Welcome to ConnectChat!</h2>
 <div id="profileName">Loading...</div>
 </div>
+
+<div class="card">
+<h3>💬 Recent Chats</h3>
+<div id="recentChats" class="status">Chats load ho rahi hain...</div>
+</div>
+
 <div class="card">
 <h3>👥 Find People</h3>
 <input id="searchInput" type="search" placeholder="Username search karo...">
@@ -70,6 +80,7 @@ footer{text-align:center;color:#888;padding:18px;font-size:13px}
 <div id="chatError"></div>
 </div>
 </main>
+
 <footer>ConnectChat — Connect with everyone</footer>
 
 <script type="module">
@@ -77,11 +88,12 @@ import {auth,db} from "./firebase.js";
 import {onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   collection,getDocs,doc,getDoc,setDoc,addDoc,updateDoc,
-  serverTimestamp,query,orderBy,onSnapshot
+  serverTimestamp,query,orderBy,onSnapshot,where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const profileName=document.getElementById("profileName");
 const usersList=document.getElementById("usersList");
+const recentChats=document.getElementById("recentChats");
 const searchInput=document.getElementById("searchInput");
 const logoutBtn=document.getElementById("logoutBtn");
 const listView=document.getElementById("listView");
@@ -111,10 +123,12 @@ onAuthStateChanged(auth,async user=>{
     currentProfile=profileSnap.exists()?profileSnap.data():{};
     profileName.textContent=currentProfile.username||"User";
     await loadUsers();
+    await loadRecentChats();
   }catch(error){
     console.error(error);
     profileName.textContent=currentProfile.username||"User";
     usersList.textContent="Users load nahi hue: "+error.message;
+    recentChats.textContent="Chats load nahi hui: "+error.message;
   }
 });
 
@@ -155,6 +169,84 @@ function renderUsers(search=""){
 }
 
 searchInput.addEventListener("input",()=>renderUsers(searchInput.value));
+
+async function loadRecentChats(){
+  recentChats.textContent="Chats load ho rahi hain...";
+  try{
+    const chatsQuery=query(
+      collection(db,"chats"),
+      where("members","array-contains",currentUser.uid)
+    );
+    const snapshot=await getDocs(chatsQuery);
+    const chatData=snapshot.docs.map(d=>({id:d.id,...d.data()}));
+
+    chatData.sort((a,b)=>{
+      const ta=a.updatedAt?.toMillis?.()||0;
+      const tb=b.updatedAt?.toMillis?.()||0;
+      return tb-ta;
+    });
+
+    recentChats.innerHTML="";
+    if(chatData.length===0){
+      recentChats.textContent="Abhi koi chat nahi. Find People se chat shuru karo.";
+      return;
+    }
+
+    for(const chat of chatData){
+      const otherUid=(chat.members||[]).find(uid=>uid!==currentUser.uid);
+      if(!otherUid)continue;
+
+      let otherProfile={};
+      try{
+        const userSnap=await getDoc(doc(db,"users",otherUid));
+        if(userSnap.exists())otherProfile=userSnap.data();
+      }catch(e){
+        console.warn("User profile load issue",e);
+      }
+
+      const row=document.createElement("div");
+      row.className="chatItem";
+
+      const details=document.createElement("div");
+      details.className="chatDetails";
+
+      const name=document.createElement("div");
+      name.className="userName";
+      name.textContent=otherProfile.username||"User";
+
+      const preview=document.createElement("div");
+      preview.className="chatPreview";
+      preview.textContent=chat.lastMessage||"Chat shuru karo";
+
+      details.append(name,preview);
+
+      const time=document.createElement("div");
+      time.className="chatTime";
+      time.textContent=formatTime(chat.updatedAt);
+
+      row.append(details,time);
+      row.onclick=()=>openChat(otherProfile.uid?otherProfile:{uid:otherUid,username:"User"});
+      recentChats.appendChild(row);
+    }
+    if(!recentChats.children.length){
+      recentChats.textContent="Abhi koi chat nahi.";
+    }
+  }catch(error){
+    console.error(error);
+    recentChats.textContent="Chats load nahi hui: "+error.message;
+  }
+}
+
+function formatTime(timestamp){
+  if(!timestamp?.toDate)return "";
+  const date=timestamp.toDate();
+  const now=new Date();
+  const sameDay=date.toDateString()===now.toDateString();
+  if(sameDay){
+    return date.toLocaleTimeString("hi-IN",{hour:"2-digit",minute:"2-digit"});
+  }
+  return date.toLocaleDateString("hi-IN",{day:"numeric",month:"short"});
+}
 
 async function openChat(person){
   if(!person.uid)return;
@@ -244,6 +336,7 @@ sendForm.onsubmit=async event=>{
     });
     messageInput.value="";
     messageInput.focus();
+    await loadRecentChats();
   }catch(error){
     console.error(error);
     chatError.textContent="Message send nahi hua: "+error.message;
