@@ -1,0 +1,180 @@
+
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ConnectChat Login</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #e9f5f2;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 420px;
+      background: white;
+      padding: 28px;
+      border-radius: 18px;
+      box-shadow: 0 5px 25px #0001;
+    }
+
+    h1 {
+      text-align: center;
+      color: #075e54;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #777;
+      margin-bottom: 24px;
+    }
+
+    input {
+      width: 100%;
+      padding: 14px;
+      margin-bottom: 14px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      font-size: 16px;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      background: #075e54;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    button:hover {
+      background: #064c44;
+    }
+
+    .switch {
+      text-align: center;
+      margin-top: 20px;
+      color: #666;
+    }
+
+    .switch a {
+      color: #075e54;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    #signupFields {
+      display: none;
+    }
+
+    #message {
+      margin-top: 15px;
+      text-align: center;
+      font-size: 14px;
+      color: #075e54;
+      overflow-wrap: anywhere;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="card">
+    <h1>ConnectChat 💬</h1>
+    <p class="subtitle" id="subtitle">Login to your account</p>
+
+    <form id="authForm">
+
+      <div id="signupFields">
+        <input
+          type="text"
+          id="username"
+          placeholder="Username"
+        >
+      </div>
+
+      <input
+        type="email"
+        id="email"
+        placeholder="Gmail address"
+        required
+      >
+
+      <input
+        type="password"
+        id="password"
+        placeholder="Password"
+        required
+      >
+
+      <button type="submit" id="submitBtn">Login</button>
+
+    </form>
+
+    <div class="switch">
+      <span id="switchText">Don't have an account?</span>
+      <a id="switchBtn">Sign up</a>
+    </div>
+
+    <p id="message"></p>
+  </div>
+
+  <script>
+    let isSignup = false;
+
+    const signupFields = document.getElementById("signupFields");
+    const subtitle = document.getElementById("subtitle");
+    const submitBtn = document.getElementById("submitBtn");
+    const switchText = document.getElementById("switchText");
+    const switchBtn = document.getElementById("switchBtn");
+    const message = document.getElementById("message");
+
+    switchBtn.onclick = function () {
+      isSignup = !isSignup;
+
+      signupFields.style.display = isSignup ? "block" : "none";
+      subtitle.textContent = isSignup
+        ? "Create your new account"
+        : "Login to your account";
+
+      submitBtn.textContent = isSignup ? "Create Account" : "Login";
+
+      switchText.textContent = isSignup
+        ? "Already have an account?"
+        : "Don't have an account?";
+
+      switchBtn.textContent = isSignup ? "Login" : "Sign up";
+      message.textContent = "";
+    };
+
+    document.getElementById("authForm").onsubmit = function (e) {
+      e.preventDefault();
+
+      message.textContent = isSignup
+        ? "Signup system will be connected soon."
+        : "Login system will be connected soon.";
+    };
+  </script>
+
+</body>
+    </html>
+  
