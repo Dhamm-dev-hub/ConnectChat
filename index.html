@@ -10,8 +10,7 @@ body{font-family:Arial,sans-serif;background:#f0f2f5;color:#222}
 header{background:#075e54;color:white;padding:15px;display:flex;align-items:center;justify-content:space-between}
 header h1{font-size:21px}
 button{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-size:15px}
-#logoutBtn{background:white;color:#075e54;font-weight:bold}
-#profileBtn{background:white;color:#075e54;font-weight:bold}
+#logoutBtn,#profileBtn{background:white;color:#075e54;font-weight:bold}
 .container{max-width:650px;margin:auto;padding:15px}
 .card{background:white;border-radius:12px;padding:16px;margin-bottom:15px;box-shadow:0 2px 8px #0001}
 h2,h3{color:#075e54;margin-bottom:10px}
@@ -38,12 +37,17 @@ h2,h3{color:#075e54;margin-bottom:10px}
 .chatPreview{font-size:14px;color:#777;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chatTime{font-size:12px;color:#888;white-space:nowrap}
 .profileTop{text-align:center;padding:10px}
-#profilePhoto{width:100px;height:100px;border-radius:50%;object-fit:cover;background:#e8f5f2;margin:10px auto;display:block}
+#profilePhoto{width:120px;height:120px;border-radius:50%;object-fit:cover;background:#e8f5f2;margin:10px auto;display:none}
 #profileDisplayName{font-size:21px;font-weight:bold;color:#075e54;margin:8px}
 #profileAboutDisplay{color:#666;margin:8px}
 .profileInput{width:100%;padding:12px;border:1px solid #ddd;border-radius:9px;font-size:16px;margin:8px 0}
 .profileLabel{display:block;margin-top:12px;font-weight:bold;color:#075e54}
 #saveProfileBtn{background:#075e54;color:white;font-weight:bold;width:100%;margin-top:12px}
+.photoButtons{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:10px 0}
+#choosePhotoBtn{background:#075e54;color:white}
+#removePhotoBtn{background:#fee;color:#b00020}
+#photoFile{display:none}
+#photoHelp{font-size:13px;color:#777;margin:8px auto;max-width:350px}
 footer{text-align:center;color:#888;padding:18px;font-size:13px}
 </style>
 </head>
@@ -102,9 +106,17 @@ footer{text-align:center;color:#888;padding:18px;font-size:13px}
   </div>
 
   <div class="profileTop">
-    <img id="profilePhoto" src="" alt="Profile photo">
+    <img id="profilePhoto" alt="Profile photo">
     <div id="profileDisplayName">Username</div>
     <div id="profileAboutDisplay">About</div>
+
+    <div class="photoButtons">
+      <button type="button" id="choosePhotoBtn">📷 Gallery se photo</button>
+      <button type="button" id="removePhotoBtn">🗑️ Photo hatao</button>
+    </div>
+
+    <input type="file" id="photoFile" accept="image/*">
+    <div id="photoHelp">Photo isi browser/device mein save hogi. Maximum 5 MB.</div>
   </div>
 
   <form id="profileForm">
@@ -114,7 +126,7 @@ footer{text-align:center;color:#888;padding:18px;font-size:13px}
     <label class="profileLabel" for="editAbout">About</label>
     <input id="editAbout" class="profileInput" maxlength="100" placeholder="Apne baare mein likho">
 
-    <label class="profileLabel" for="editPhotoURL">Profile photo URL (optional)</label>
+    <label class="profileLabel" for="editPhotoURL">Photo URL (optional)</label>
     <input id="editPhotoURL" class="profileInput" type="url" placeholder="https://...">
 
     <button id="saveProfileBtn" type="submit">Save Profile</button>
@@ -160,12 +172,104 @@ const editAbout=document.getElementById("editAbout");
 const editPhotoURL=document.getElementById("editPhotoURL");
 const saveProfileBtn=document.getElementById("saveProfileBtn");
 const profileMessage=document.getElementById("profileMessage");
+const choosePhotoBtn=document.getElementById("choosePhotoBtn");
+const removePhotoBtn=document.getElementById("removePhotoBtn");
+const photoFile=document.getElementById("photoFile");
 
 let currentUser=null;
 let currentProfile={};
 let allUsers=[];
 let activeChatId=null;
 let unsubscribeMessages=null;
+let localPhotoObjectURL=null;
+
+/* Local IndexedDB photo storage */
+function openPhotoDB(){
+  return new Promise((resolve,reject)=>{
+    const request=indexedDB.open("ConnectChatPhotos",1);
+    request.onupgradeneeded=()=>{
+      const database=request.result;
+      if(!database.objectStoreNames.contains("photos")){
+        database.createObjectStore("photos");
+      }
+    };
+    request.onsuccess=()=>resolve(request.result);
+    request.onerror=()=>reject(request.error);
+  });
+}
+
+async function saveLocalPhoto(uid,blob){
+  const database=await openPhotoDB();
+  return new Promise((resolve,reject)=>{
+    const transaction=database.transaction("photos","readwrite");
+    transaction.objectStore("photos").put(blob,uid);
+    transaction.oncomplete=()=>{database.close();resolve();};
+    transaction.onerror=()=>{database.close();reject(transaction.error);};
+  });
+}
+
+async function getLocalPhoto(uid){
+  const database=await openPhotoDB();
+  return new Promise((resolve,reject)=>{
+    const transaction=database.transaction("photos","readonly");
+    const request=transaction.objectStore("photos").get(uid);
+    request.onsuccess=()=>{database.close();resolve(request.result||null);};
+    request.onerror=()=>{database.close();reject(request.error);};
+  });
+}
+
+async function deleteLocalPhoto(uid){
+  const database=await openPhotoDB();
+  return new Promise((resolve,reject)=>{
+    const transaction=database.transaction("photos","readwrite");
+    transaction.objectStore("photos").delete(uid);
+    transaction.oncomplete=()=>{database.close();resolve();};
+    transaction.onerror=()=>{database.close();reject(transaction.error);};
+  });
+}
+
+function setPhotoSource(source){
+  if(localPhotoObjectURL){
+    URL.revokeObjectURL(localPhotoObjectURL);
+    localPhotoObjectURL=null;
+  }
+  if(source){
+    profilePhoto.src=source;
+    profilePhoto.style.display="block";
+    profilePhoto.onerror=()=>{
+      profilePhoto.style.display="none";
+    };
+  }else{
+    profilePhoto.removeAttribute("src");
+    profilePhoto.style.display="none";
+  }
+}
+
+async function displaySavedPhoto(){
+  if(!currentUser)return;
+  try{
+    const localBlob=await getLocalPhoto(currentUser.uid);
+    if(localBlob){
+      localPhotoObjectURL=URL.createObjectURL(localBlob);
+      setPhotoSource(localPhotoObjectURL);
+      return;
+    }
+  }catch(error){
+    console.warn("Local photo load error:",error);
+  }
+  setPhotoSource(currentProfile.photoURL||"");
+}
+
+function updateProfileDisplay(){
+  const username=currentProfile.username||"User";
+  profileName.textContent=username;
+  profileDisplayName.textContent=username;
+  profileAboutDisplay.textContent=currentProfile.about||"Hey! I am using ConnectChat.";
+  editUsername.value=username;
+  editAbout.value=currentProfile.about||"";
+  editPhotoURL.value=currentProfile.photoURL||"";
+  displaySavedPhoto();
+}
 
 onAuthStateChanged(auth,async user=>{
   if(!user){
@@ -187,18 +291,6 @@ onAuthStateChanged(auth,async user=>{
   }
 });
 
-function updateProfileDisplay(){
-  const username=currentProfile.username||"User";
-  profileName.textContent=username;
-  profileDisplayName.textContent=username;
-  profileAboutDisplay.textContent=currentProfile.about||"Hey! I am using ConnectChat.";
-  editUsername.value=username;
-  editAbout.value=currentProfile.about||"";
-  editPhotoURL.value=currentProfile.photoURL||"";
-  profilePhoto.src=currentProfile.photoURL||"";
-  profilePhoto.style.display=currentProfile.photoURL?"block":"none";
-}
-
 profileBtn.onclick=()=>{
   listView.style.display="none";
   chatView.style.display="none";
@@ -209,6 +301,89 @@ profileBtn.onclick=()=>{
 profileBackBtn.onclick=()=>{
   profileView.style.display="none";
   listView.style.display="block";
+};
+
+/* Open phone gallery */
+choosePhotoBtn.onclick=()=>{
+  photoFile.click();
+};
+
+/* Photo selected */
+photoFile.onchange=async()=>{
+  const file=photoFile.files?.[0];
+  if(!file)return;
+
+  if(!file.type.startsWith("image/")){
+    profileMessage.style.color="red";
+    profileMessage.textContent="Image file select karo.";
+    photoFile.value="";
+    return;
+  }
+
+  if(file.size>5*1024*1024){
+    profileMessage.style.color="red";
+    profileMessage.textContent="Photo 5 MB se chhoti honi chahiye.";
+    photoFile.value="";
+    return;
+  }
+
+  choosePhotoBtn.disabled=true;
+  profileMessage.style.color="#075e54";
+  profileMessage.textContent="Photo save ho rahi hai...";
+
+  try{
+    /* Resize/compress image for local storage */
+    const bitmap=await createImageBitmap(file);
+    const maxSide=512;
+    const scale=Math.min(1,maxSide/Math.max(bitmap.width,bitmap.height));
+    const canvas=document.createElement("canvas");
+    canvas.width=Math.round(bitmap.width*scale);
+    canvas.height=Math.round(bitmap.height*scale);
+    const context=canvas.getContext("2d");
+    context.drawImage(bitmap,0,0,canvas.width,canvas.height);
+    bitmap.close();
+
+    const blob=await new Promise(resolve=>{
+      canvas.toBlob(resolve,"image/jpeg",0.82);
+    });
+    if(!blob)throw new Error("Photo convert nahi ho saki.");
+
+    await saveLocalPhoto(currentUser.uid,blob);
+    await displaySavedPhoto();
+    profileMessage.style.color="#075e54";
+    profileMessage.textContent="Profile photo save ho gayi! ✅";
+  }catch(error){
+    console.error(error);
+    profileMessage.style.color="red";
+    profileMessage.textContent="Photo save nahi hui: "+error.message;
+  }finally{
+    choosePhotoBtn.disabled=false;
+    photoFile.value="";
+  }
+};
+
+/* Remove selected photo */
+removePhotoBtn.onclick=async()=>{
+  if(!currentUser)return;
+  removePhotoBtn.disabled=true;
+  profileMessage.style.color="#075e54";
+  profileMessage.textContent="Photo remove ho rahi hai...";
+  try{
+    await deleteLocalPhoto(currentUser.uid);
+    currentProfile.photoURL="";
+    editPhotoURL.value="";
+    await updateDoc(doc(db,"users",currentUser.uid),{
+      photoURL:""
+    });
+    setPhotoSource("");
+    profileMessage.textContent="Profile photo hata di gayi.";
+  }catch(error){
+    console.error(error);
+    profileMessage.style.color="red";
+    profileMessage.textContent="Photo remove nahi hui: "+error.message;
+  }finally{
+    removePhotoBtn.disabled=false;
+  }
 };
 
 profileForm.onsubmit=async event=>{
@@ -375,84 +550,110 @@ async function openChat(person){
       });
     }
 
-    const messagesQuery=query(
-      collection(db,"chats",activeChatId,"messages"),
-      orderBy("createdAt","asc")
-    );
-    unsubscribeMessages=onSnapshot(messagesQuery,snapshot=>{
-      messagesDiv.innerHTML="";
-      if(snapshot.empty){
-        messagesDiv.innerHTML='<div class="status">Pehla message bhejo 👋</div>';
-        return;
-      }
-      snapshot.forEach(messageDoc=>{
-        const msg=messageDoc.data();
-        const bubble=document.createElement("div");
-        bubble.className="msg "+(msg.senderId===currentUser.uid?"mine":"theirs");
-        bubble.textContent=msg.text||"";
-        messagesDiv.appendChild(bubble);
-      });
-      messagesDiv.scrollTop=messagesDiv.scrollHeight;
-    },error=>{
-      console.error(error);
-      chatError.textContent="Messages load error: "+error.message;
-    });
-  }catch(error){
-    console.error(error);
-    chatError.textContent="Chat open nahi hui: "+error.message;
-    messagesDiv.innerHTML='<div class="status">Chat load nahi ho saki.</div>';
+    const messagesQuery = query(
+  collection(db, "chats", activeChatId, "messages"),
+  orderBy("createdAt", "asc")
+);
+
+unsubscribeMessages = onSnapshot(messagesQuery, snapshot => {
+  messagesDiv.innerHTML = "";
+
+  if (snapshot.empty) {
+    messagesDiv.innerHTML =
+      '<div class="status">Pehla message bhejo 👋</div>';
+    return;
   }
+
+  snapshot.forEach(doc => {
+    const msg = doc.data();
+    const div = document.createElement("div");
+
+    div.className = "message " +
+      (msg.senderId === currentUser.uid ? "sent" : "received");
+
+    div.innerHTML = `
+      <div>${escapeHTML(msg.text || "")}</div>
+      <small>${formatTime(msg.createdAt)}</small>
+    `;
+
+    messagesDiv.appendChild(div);
+  });
+
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+});
+
 }
 
-backBtn.onclick=()=>{
-  chatView.style.display="none";
-  listView.style.display="block";
-  if(unsubscribeMessages){
+// Back button
+backBtn.onclick = () => {
+  if (unsubscribeMessages) {
     unsubscribeMessages();
-    unsubscribeMessages=null;
+    unsubscribeMessages = null;
   }
-  activeChatId=null;
+
+  chatView.style.display = "none";
+  homeView.style.display = "block";
+  activeChatId = null;
 };
 
-sendForm.onsubmit=async event=>{
-  event.preventDefault();
-  const text=messageInput.value.trim();
-  if(!text||!activeChatId)return;
-  sendBtn.disabled=true;
-  chatError.textContent="";
-  try{
-    const chatRef=doc(db,"chats",activeChatId);
-    await addDoc(collection(db,"chats",activeChatId,"messages"),{
-      text,
-      senderId:currentUser.uid,
-      senderUsername:currentProfile.username||"User",
-      createdAt:serverTimestamp()
+// Send message
+sendForm.onsubmit = async (e) => {
+  e.preventDefault();
+
+  const text = messageInput.value.trim();
+
+  if (!text || !activeChatId || !currentUser) {
+    return;
+  }
+
+  messageInput.value = "";
+
+  try {
+    const chatRef = doc(db, "chats", activeChatId);
+
+    await addDoc(
+      collection(db, "chats", activeChatId, "messages"),
+      {
+        text: text,
+        senderId: currentUser.uid,
+        createdAt: serverTimestamp()
+      }
+    );
+
+    await updateDoc(chatRef, {
+      lastMessage: text,
+      lastMessageTime: serverTimestamp()
     });
-    await updateDoc(chatRef,{
-      lastMessage:text,
-      updatedAt:serverTimestamp()
-    });
-    messageInput.value="";
-    messageInput.focus();
-    await loadRecentChats();
-  }catch(error){
+
+  } catch (error) {
     console.error(error);
-    chatError.textContent="Message send nahi hua: "+error.message;
-  }finally{
-    sendBtn.disabled=false;
+    alert("Message send nahi hua: " + error.message);
   }
 };
 
-logoutBtn.onclick=async()=>{
-  logoutBtn.disabled=true;
-  try{
+// Logout
+logoutBtn.onclick = async () => {
+  try {
+    if (unsubscribeMessages) {
+      unsubscribeMessages();
+      unsubscribeMessages = null;
+    }
+
     await signOut(auth);
-    location.href="login.html";
-  }catch(error){
-    alert("Logout error: "+error.message);
-    logoutBtn.disabled=false;
+
+    currentUser = null;
+    activeChatId = null;
+
+    chatView.style.display = "none";
+    homeView.style.display = "none";
+    profileView.style.display = "none";
+    authView.style.display = "block";
+
+  } catch (error) {
+    alert("Logout error: " + error.message);
   }
 };
+
 </script>
 </body>
-  </html>
+</html>
