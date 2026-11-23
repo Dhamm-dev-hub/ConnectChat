@@ -542,31 +542,47 @@ if ("serviceWorker" in navigator) {
   ⬇ Install App
 </button>
 
+
 <script>
 let deferredInstallPrompt;
 const installBtn = document.getElementById("installAppBtn");
 
-window.addEventListener("beforeinstallprompt", (event) => {
-  event.preventDefault();
-  deferredInstallPrompt = event;
-  installBtn.style.display = "block";
-});
+const isAppInstalled =
+  window.matchMedia("(display-mode: standalone)").matches ||
+  window.navigator.standalone === true;
 
-installBtn.addEventListener("click", async () => {
-  if (!deferredInstallPrompt) return;
-
-  deferredInstallPrompt.prompt();
-
-  await deferredInstallPrompt.userChoice;
-  deferredInstallPrompt = null;
+// Agar app pehle se installed hai
+if (isAppInstalled) {
   installBtn.style.display = "none";
-});
+} else {
 
-window.addEventListener("appinstalled", () => {
-  installBtn.style.display = "none";
-  alert("ConnectChat successfully installed!");
-});
-</script>
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    installBtn.style.display = "block";
+  });
+
+  installBtn.addEventListener("click", async () => {
+    if (!deferredInstallPrompt) return;
+
+    deferredInstallPrompt.prompt();
+
+    const choice = await deferredInstallPrompt.userChoice;
+
+    if (choice.outcome === "accepted") {
+      installBtn.style.display = "none";
+    }
+
+    deferredInstallPrompt = null;
+  });
+
+  window.addEventListener("appinstalled", () => {
+    installBtn.style.display = "none";
+    deferredInstallPrompt = null;
+    alert("ConnectChat successfully installed!");
+  });
+}
+  </script>
   
 </body>  
   </html>
