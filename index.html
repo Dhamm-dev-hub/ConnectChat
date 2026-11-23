@@ -1,266 +1,267 @@
-
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ConnectChat</title>
-
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: Arial, sans-serif;
-      background: #f0f2f5;
-      color: #222;
-    }
-
-    header {
-      background: #075e54;
-      color: white;
-      padding: 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    header h1 { font-size: 22px; }
-
-    button {
-      border: none;
-      cursor: pointer;
-      border-radius: 8px;
-      padding: 10px 14px;
-      font-size: 15px;
-    }
-
-    #logoutBtn {
-      background: white;
-      color: #075e54;
-      font-weight: bold;
-    }
-
-    .container {
-      max-width: 650px;
-      margin: auto;
-      padding: 18px;
-    }
-
-    .card {
-      background: white;
-      border-radius: 12px;
-      padding: 18px;
-      margin-bottom: 16px;
-      box-shadow: 0 2px 8px #0000000d;
-    }
-
-    h2, h3 { color: #075e54; margin-bottom: 10px; }
-
-    #searchInput {
-      width: 100%;
-      padding: 14px;
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      font-size: 16px;
-      margin: 15px 0;
-    }
-
-    .user {
-      padding: 14px 0;
-      border-bottom: 1px solid #eee;
-    }
-
-    .user:last-child { border-bottom: none; }
-
-    .userName {
-      font-weight: bold;
-      color: #075e54;
-      margin-bottom: 5px;
-    }
-
-    .userEmail {
-      font-size: 14px;
-      color: #777;
-    }
-
-    .status {
-      color: #777;
-      text-align: center;
-      padding: 15px;
-    }
-
-    #profileName {
-      font-size: 20px;
-      font-weight: bold;
-      margin-bottom: 6px;
-    }
-
-    #profileEmail {
-      color: #666;
-      overflow-wrap: anywhere;
-    }
-
-    footer {
-      text-align: center;
-      color: #888;
-      padding: 20px;
-      font-size: 13px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ConnectChat</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#f0f2f5;color:#222}
+header{background:#075e54;color:white;padding:15px;display:flex;align-items:center;justify-content:space-between}
+header h1{font-size:21px}
+button{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-size:15px}
+#logoutBtn{background:white;color:#075e54;font-weight:bold}
+.container{max-width:650px;margin:auto;padding:15px}
+.card{background:white;border-radius:12px;padding:16px;margin-bottom:15px;box-shadow:0 2px 8px #0001}
+h2,h3{color:#075e54;margin-bottom:10px}
+#searchInput{width:100%;padding:13px;border:1px solid #ddd;border-radius:9px;font-size:16px;margin:12px 0}
+.user{padding:15px;border-bottom:1px solid #eee;cursor:pointer}
+.user:hover{background:#f3f8f7}
+.userName{font-weight:bold;color:#075e54;font-size:17px}
+.status{text-align:center;padding:15px;color:#777}
+#chatView{display:none}
+.chatHeader{display:flex;align-items:center;gap:10px;border-bottom:1px solid #eee;padding-bottom:12px}
+#backBtn{background:#e8f5f2;color:#075e54}
+#chatUsername{font-weight:bold;color:#075e54;font-size:18px}
+#messages{height:55vh;min-height:300px;overflow-y:auto;padding:12px;background:#e9f5f2;border-radius:10px;margin:12px 0;display:flex;flex-direction:column;gap:8px}
+.msg{max-width:80%;padding:10px 12px;border-radius:12px;overflow-wrap:anywhere}
+.mine{align-self:flex-end;background:#d5f5dc}
+.theirs{align-self:flex-start;background:white}
+.msgName{font-size:12px;color:#666;margin-bottom:4px}
+#sendForm{display:flex;gap:8px}
+#messageInput{flex:1;min-width:0;padding:12px;border:1px solid #ddd;border-radius:9px;font-size:16px}
+#sendBtn{background:#075e54;color:white;font-weight:bold}
+#sendBtn:disabled{opacity:.5}
+#chatError{color:#c00;font-size:13px;margin-top:8px}
+footer{text-align:center;color:#888;padding:18px;font-size:13px}
+</style>
 </head>
-
 <body>
-
 <header>
-  <h1>ConnectChat 💬</h1>
-  <button id="logoutBtn">Logout</button>
+<h1>ConnectChat 💬</h1>
+<button id="logoutBtn">Logout</button>
 </header>
 
 <main class="container">
+<div id="listView">
+<div class="card">
+<h2>Welcome to ConnectChat!</h2>
+<div id="profileName">Loading...</div>
+</div>
+<div class="card">
+<h3>👥 Find People</h3>
+<input id="searchInput" type="search" placeholder="Username search karo...">
+<div id="usersList" class="status">Users load ho rahe hain...</div>
+</div>
+</div>
 
-  <div class="card">
-    <h2>Welcome to ConnectChat!</h2>
-    <div id="profileName">Loading account...</div>
-    <div id="profileEmail"></div>
-  </div>
-
-  <div class="card">
-    <h3>👥 Find People</h3>
-    <input
-      id="searchInput"
-      type="search"
-      placeholder="Search by username or email..."
-    >
-    <div id="usersList" class="status">Loading users...</div>
-  </div>
-
-  <div class="card">
-    <h3>💬 Your Chats</h3>
-    <div class="status">Chats will be available soon.</div>
-  </div>
-
+<div id="chatView" class="card">
+<div class="chatHeader">
+<button id="backBtn">← Back</button>
+<div id="chatUsername">Username</div>
+</div>
+<div id="messages">
+<div class="status">Messages load ho rahe hain...</div>
+</div>
+<form id="sendForm">
+<input id="messageInput" type="text" placeholder="Message likho..." autocomplete="off" maxlength="2000" required>
+<button id="sendBtn" type="submit">Send</button>
+</form>
+<div id="chatError"></div>
+</div>
 </main>
-
 <footer>ConnectChat — Connect with everyone</footer>
 
 <script type="module">
-  import { auth, db } from "./firebase.js";
+import {auth,db} from "./firebase.js";
+import {onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  collection,getDocs,doc,getDoc,setDoc,addDoc,updateDoc,
+  serverTimestamp,query,orderBy,onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  import {
-    onAuthStateChanged,
-    signOut
-  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+const profileName=document.getElementById("profileName");
+const usersList=document.getElementById("usersList");
+const searchInput=document.getElementById("searchInput");
+const logoutBtn=document.getElementById("logoutBtn");
+const listView=document.getElementById("listView");
+const chatView=document.getElementById("chatView");
+const backBtn=document.getElementById("backBtn");
+const chatUsername=document.getElementById("chatUsername");
+const messagesDiv=document.getElementById("messages");
+const sendForm=document.getElementById("sendForm");
+const messageInput=document.getElementById("messageInput");
+const sendBtn=document.getElementById("sendBtn");
+const chatError=document.getElementById("chatError");
 
-  import {
-    collection,
-    getDocs,
-    doc,
-    getDoc
-  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+let currentUser=null;
+let currentProfile={};
+let allUsers=[];
+let activeChatId=null;
+let unsubscribeMessages=null;
 
-  const profileName = document.getElementById("profileName");
-  const profileEmail = document.getElementById("profileEmail");
-  const usersList = document.getElementById("usersList");
-  const searchInput = document.getElementById("searchInput");
-  const logoutBtn = document.getElementById("logoutBtn");
+onAuthStateChanged(auth,async user=>{
+  if(!user){
+    location.href="login.html";
+    return;
+  }
+  currentUser=user;
+  try{
+    const profileSnap=await getDoc(doc(db,"users",user.uid));
+    currentProfile=profileSnap.exists()?profileSnap.data():{};
+    profileName.textContent=currentProfile.username||"User";
+    await loadUsers();
+  }catch(error){
+    console.error(error);
+    profileName.textContent=currentProfile.username||"User";
+    usersList.textContent="Users load nahi hue: "+error.message;
+  }
+});
 
-  let allUsers = [];
-  let currentUser = null;
+async function loadUsers(){
+  usersList.textContent="Users load ho rahe hain...";
+  try{
+    const snapshot=await getDocs(collection(db,"users"));
+    allUsers=snapshot.docs
+      .map(d=>d.data())
+      .filter(person=>person.uid!==currentUser.uid);
+    renderUsers(searchInput.value);
+  }catch(error){
+    console.error(error);
+    usersList.textContent="Users load nahi hue: "+error.message;
+  }
+}
 
-  onAuthStateChanged(auth, async (user) => {
-    if (!user) {
-      window.location.href = "login.html";
-      return;
-    }
-
-    currentUser = user;
-    profileEmail.textContent = user.email || "";
-
-    try {
-      const profileRef = doc(db, "users", user.uid);
-      const profileSnap = await getDoc(profileRef);
-
-      if (profileSnap.exists()) {
-        const profile = profileSnap.data();
-        profileName.textContent = profile.username || user.email || "User";
-      } else {
-        profileName.textContent = user.email || "User";
-      }
-
-      await loadUsers();
-    } catch (error) {
-      console.error(error);
-      profileName.textContent = user.email || "User";
-      usersList.textContent = "Users load nahi ho paaye: " + error.message;
-    }
+function renderUsers(search=""){
+  const term=search.trim().toLowerCase();
+  const filtered=allUsers.filter(person=>
+    (person.username||"").toLowerCase().includes(term)
+  );
+  usersList.innerHTML="";
+  if(!filtered.length){
+    usersList.textContent="Koi user nahi mila.";
+    return;
+  }
+  filtered.forEach(person=>{
+    const row=document.createElement("div");
+    row.className="user";
+    const name=document.createElement("div");
+    name.className="userName";
+    name.textContent=person.username||"User";
+    row.appendChild(name);
+    row.onclick=()=>openChat(person);
+    usersList.appendChild(row);
   });
+}
 
-  async function loadUsers() {
-    usersList.textContent = "Loading users...";
+searchInput.addEventListener("input",()=>renderUsers(searchInput.value));
 
-    try {
-      const snapshot = await getDocs(collection(db, "users"));
+async function openChat(person){
+  if(!person.uid)return;
+  activeChatId=[currentUser.uid,person.uid].sort().join("_");
+  chatUsername.textContent=person.username||"User";
+  listView.style.display="none";
+  chatView.style.display="block";
+  messagesDiv.innerHTML='<div class="status">Chat khul rahi hai...</div>';
+  chatError.textContent="";
+  messageInput.focus();
 
-      allUsers = snapshot.docs
-        .map(item => item.data())
-        .filter(person => person.uid !== currentUser.uid);
-
-      renderUsers(searchInput.value);
-    } catch (error) {
-      console.error(error);
-      usersList.textContent = "Users load nahi ho paaye: " + error.message;
-    }
+  if(unsubscribeMessages){
+    unsubscribeMessages();
+    unsubscribeMessages=null;
   }
 
-  function renderUsers(query = "") {
-    const q = query.trim().toLowerCase();
+  try{
+    const chatRef=doc(db,"chats",activeChatId);
+    const chatSnap=await getDoc(chatRef);
+    if(!chatSnap.exists()){
+      await setDoc(chatRef,{
+        members:[currentUser.uid,person.uid],
+        createdAt:serverTimestamp(),
+        lastMessage:"",
+        updatedAt:serverTimestamp()
+      });
+    }
 
-    const filtered = allUsers.filter(person =>
-      (person.usernameLower || person.username || "").toLowerCase().includes(q) ||
-      (person.email || "").toLowerCase().includes(q)
+    const messagesQuery=query(
+      collection(db,"chats",activeChatId,"messages"),
+      orderBy("createdAt","asc")
     );
 
-    usersList.innerHTML = "";
-
-    if (filtered.length === 0) {
-      usersList.textContent = "No users found.";
-      return;
-    }
-
-    filtered.forEach(person => {
-      const row = document.createElement("div");
-      row.className = "user";
-
-      const name = document.createElement("div");
-      name.className = "userName";
-      name.textContent = person.username || "Unnamed User";
-
-      const email = document.createElement("div");
-      email.className = "userEmail";
-      email.textContent = person.email || "";
-
-      row.append(name, email);
-      usersList.appendChild(row);
-    });
-  }
-
-  searchInput.addEventListener("input", () => {
-    renderUsers(searchInput.value);
-  });
-
-  logoutBtn.onclick = async () => {
-    logoutBtn.disabled = true;
-
-    try {
-      await signOut(auth);
-      window.location.href = "login.html";
-    } catch (error) {
+    unsubscribeMessages=onSnapshot(messagesQuery,snapshot=>{
+      messagesDiv.innerHTML="";
+      if(snapshot.empty){
+        messagesDiv.innerHTML='<div class="status">Pehla message bhejo 👋</div>';
+        return;
+      }
+      snapshot.forEach(messageDoc=>{
+        const msg=messageDoc.data();
+        const bubble=document.createElement("div");
+        bubble.className="msg "+(msg.senderId===currentUser.uid?"mine":"theirs");
+        bubble.textContent=msg.text||"";
+        messagesDiv.appendChild(bubble);
+      });
+      messagesDiv.scrollTop=messagesDiv.scrollHeight;
+    },error=>{
       console.error(error);
-      alert("Logout error: " + error.message);
-      logoutBtn.disabled = false;
-    }
-  };
-</script>
+      chatError.textContent="Messages load error: "+error.message;
+    });
+  }catch(error){
+    console.error(error);
+    chatError.textContent="Chat open nahi hui: "+error.message;
+    messagesDiv.innerHTML='<div class="status">Chat load nahi ho saki.</div>';
+  }
+}
 
+backBtn.onclick=()=>{
+  chatView.style.display="none";
+  listView.style.display="block";
+  if(unsubscribeMessages){
+    unsubscribeMessages();
+    unsubscribeMessages=null;
+  }
+  activeChatId=null;
+};
+
+sendForm.onsubmit=async event=>{
+  event.preventDefault();
+  const text=messageInput.value.trim();
+  if(!text||!activeChatId)return;
+
+  sendBtn.disabled=true;
+  chatError.textContent="";
+  try{
+    const chatRef=doc(db,"chats",activeChatId);
+    await addDoc(collection(db,"chats",activeChatId,"messages"),{
+      text,
+      senderId:currentUser.uid,
+      senderUsername:currentProfile.username||"User",
+      createdAt:serverTimestamp()
+    });
+    await updateDoc(chatRef,{
+      lastMessage:text,
+      updatedAt:serverTimestamp()
+    });
+    messageInput.value="";
+    messageInput.focus();
+  }catch(error){
+    console.error(error);
+    chatError.textContent="Message send nahi hua: "+error.message;
+  }finally{
+    sendBtn.disabled=false;
+  }
+};
+
+logoutBtn.onclick=async()=>{
+  logoutBtn.disabled=true;
+  try{
+    await signOut(auth);
+    location.href="login.html";
+  }catch(error){
+    alert("Logout error: "+error.message);
+    logoutBtn.disabled=false;
+  }
+};
+</script>
 </body>
-</html>
+  </html>
