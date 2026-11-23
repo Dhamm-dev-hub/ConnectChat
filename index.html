@@ -75,10 +75,32 @@ footer{text-align:center;color:#888;padding:18px;font-size:13px}
   <div id="messages">  
     <div class="status">Messages load ho rahe hain...</div>  
   </div>  
-  <form id="sendForm">  
-    <input id="messageInput" type="text" placeholder="Message likho..." autocomplete="off" maxlength="2000" required>  
-    <button id="sendBtn" type="submit">Send</button>  
-  </form>  
+
+<form id="sendForm">
+  <input
+    id="messageInput"
+    type="text"
+    placeholder="Message likho..."
+    autocomplete="off"
+    maxlength="2000"
+    required
+  >
+
+  <button type="button" id="attachBtn">📎</button>
+
+  <input
+    type="file"
+    id="fileInput"
+    accept="image/*,.pdf,.doc,.docx,.txt"
+    hidden
+  >
+
+  <button id="sendBtn" type="submit">Send</button>
+</form>
+
+<div id="filePreview"></div>
+  
+  
   <div id="chatError"></div>  
 </div>  <!-- PROFILE -->  <div id="profileView" class="card">  
   <div class="chatHeader">  
