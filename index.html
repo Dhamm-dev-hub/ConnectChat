@@ -1,0 +1,130 @@
+
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ConnectChat</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      color: #222;
+    }
+
+    header {
+      background: #075e54;
+      color: white;
+      padding: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    header h1 {
+      font-size: 23px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    .welcome {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px #0001;
+    }
+
+    .welcome h2 {
+      color: #075e54;
+      margin-bottom: 8px;
+    }
+
+    .search {
+      width: 100%;
+      padding: 14px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      font-size: 16px;
+      margin: 15px 0;
+    }
+
+    .section {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 15px;
+    }
+
+    .section h3 {
+      color: #075e54;
+      margin-bottom: 12px;
+    }
+
+    .empty {
+      text-align: center;
+      color: #777;
+      padding: 30px 10px;
+    }
+
+    footer {
+      text-align: center;
+      color: #888;
+      padding: 20px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>ConnectChat 💬</h1>
+  </header>
+
+  <main class="container">
+
+    <div class="welcome">
+      <h2>Welcome to ConnectChat!</h2>
+      <p>Connect with people and chat with your friends.</p>
+    </div>
+
+    <input
+      class="search"
+      type="search"
+      placeholder="Search people..."
+    >
+
+    <div class="section">
+      <h3>👥 Find People</h3>
+      <div class="empty">
+        Users will appear here.
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>💬 Your Chats</h3>
+      <div class="empty">
+        Your conversations will appear here.
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    ConnectChat — Connect with everyone
+  </footer>
+
+</body>
+</html>
