@@ -98,17 +98,50 @@ footer{text-align:center;color:#888;padding:18px;font-size:13px}
   </form>  
   <div id="profileMessage"></div>  
 </div>  </main>  
-<footer>ConnectChat — Connect with everyone</footer>  <script type="module">  
+<footer>ConnectChat — Connect with everyone</footer> 
+  <script type="module">  
 import {auth,db} from "./firebase.js";  
 import {onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";  
 import {  
   collection,getDocs,doc,getDoc,setDoc,addDoc,updateDoc,  
   serverTimestamp,query,orderBy,onSnapshot,where  
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";  
+    import {
+  getDatabase,
+  ref,
+  onValue,
+  onDisconnect,
+  set
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
   
 const profileName=document.getElementById("profileName");  
 const usersList=document.getElementById("usersList");  
 const recentChats=document.getElementById("recentChats");  
+
+    // ONLINE / OFFLINE STATUS
+
+const realtimeDB = getDatabase();
+let statusListener = null;
+
+function setOnlineStatus(uid) {
+  const statusRef = ref(realtimeDB, "status/" + uid);
+  const connectedRef = ref(realtimeDB, ".info/connected");
+
+  onValue(connectedRef, (snapshot) => {
+    if (snapshot.val() === true) {
+      onDisconnect(statusRef).set({
+        state: "offline",
+        lastChanged: Date.now()
+      });
+
+      set(statusRef, {
+        state: "online",
+        lastChanged: Date.now()
+      });
+    }
+  });
+    }
+    
 const searchInput=document.getElementById("searchInput");  
 const logoutBtn=document.getElementById("logoutBtn");  
 const profileBtn=document.getElementById("profileBtn");  
@@ -145,6 +178,8 @@ onAuthStateChanged(auth,async user=>{
     location.href="login.html";  
     return;  
   }  
+
+setOnlineStatus(user.uid);
   currentUser=user;  
   try{  
     const profileSnap=await getDoc(doc(db,"users",user.uid));  
@@ -223,9 +258,12 @@ async function loadUsers(){
   usersList.textContent="Users load ho rahe hain...";  
   try{  
     const snapshot=await getDocs(collection(db,"users"));  
-    allUsers=snapshot.docs  
-      .map(d=>d.data())  
-      .filter(person=>person.uid!==currentUser.uid);  
+    allUsers=snapshot.docs
+  .map(d=>({
+    ...d.data(),
+    uid: d.id
+  }))
+  .filter(person=>person.uid!==currentUser.uid);
     renderUsers(searchInput.value);  
   }catch(error){  
     console.error(error);  
@@ -233,27 +271,65 @@ async function loadUsers(){
   }  
 }  
   
-function renderUsers(search=""){  
-  const term=search.trim().toLowerCase();  
-  const filtered=allUsers.filter(person=>  
-    (person.username||"").toLowerCase().includes(term)  
-  );  
-  usersList.innerHTML="";  
-  if(!filtered.length){  
-    usersList.textContent="Koi user nahi mila.";  
-    return;  
-  }  
-  filtered.forEach(person=>{  
-    const row=document.createElement("div");  
-    row.className="user";  
-    const name=document.createElement("div");  
-    name.className="userName";  
-    name.textContent=person.username||"User";  
-    row.appendChild(name);  
-    row.onclick=()=>openChat(person);  
-    usersList.appendChild(row);  
-  });  
-}  
+const userStatusUnsubscribers = new Map();
+const userStatuses = {};
+
+function renderUsers(search="") {
+  const term = search.trim().toLowerCase();
+
+  // Har user ka status listener ek hi baar lagao
+  allUsers.forEach(person => {
+    const uid = person.uid || person.id;
+
+    if (!uid || userStatusUnsubscribers.has(uid)) return;
+
+    const statusRef = ref(realtimeDB, "status/" + uid);
+
+    const unsubscribe = onValue(statusRef, snapshot => {
+      const data = snapshot.val();
+      userStatuses[uid] = data?.state || "offline";
+      renderUsers(search);
+    });
+
+    userStatusUnsubscribers.set(uid, unsubscribe);
+  });
+
+  const filtered = allUsers.filter(person =>
+    (person.username || "").toLowerCase().includes(term)
+  );
+
+  usersList.innerHTML = "";
+
+  if (!filtered.length) {
+    usersList.textContent = "Koi user nahi mila.";
+    return;
+  }
+
+  filtered.forEach(person => {
+    const uid = person.uid || person.id;
+    const row = document.createElement("div");
+    row.className = "user";
+
+    const name = document.createElement("div");
+    name.className = "userName";
+    name.textContent = person.username || "User";
+
+    const status = document.createElement("small");
+    const isOnline = userStatuses[uid] === "online";
+
+    status.textContent = isOnline ? "● Online" : "● Offline";
+    status.style.color = isOnline ? "#16a34a" : "#888";
+    status.style.display = "block";
+    status.style.marginTop = "4px";
+
+    row.appendChild(name);
+    row.appendChild(status);
+
+    row.onclick = () => openChat(person);
+    usersList.appendChild(row);
+  });
+    }
+    
 searchInput.addEventListener("input",()=>renderUsers(searchInput.value));  
   
 async function loadRecentChats(){  
