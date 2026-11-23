@@ -522,5 +522,51 @@ if ("serviceWorker" in navigator) {
   });
 }
   </script>
+  
+<button id="installAppBtn" style="
+  p
+  display:none;
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  z-index:9999;
+  background:#128C7E;
+  color:white;
+  border:none;
+  padding:14px 20px;
+  border-radius:30px;
+  font-size:16px;
+  font-weight:bold;
+  box-shadow:0 4px 12px #0003;
+">
+  ⬇ Install App
+</button>
+
+<script>
+let deferredInstallPrompt;
+const installBtn = document.getElementById("installAppBtn");
+
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  installBtn.style.display = "block";
+});
+
+installBtn.addEventListener("click", async () => {
+  if (!deferredInstallPrompt) return;
+
+  deferredInstallPrompt.prompt();
+
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  installBtn.style.display = "none";
+});
+
+window.addEventListener("appinstalled", () => {
+  installBtn.style.display = "none";
+  alert("ConnectChat successfully installed!");
+});
+</script>
+  
 </body>  
   </html>
