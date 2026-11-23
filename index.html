@@ -2,6 +2,8 @@
 <head>  
 <meta charset="UTF-8">  
 <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+  <link rel="manifest" href="/ConnectChat/manifest.json">
+<meta name="theme-color" content="#128C7E">
 <title>ConnectChat</title>  
 <style>  
 *{box-sizing:border-box;margin:0;padding:0}  
@@ -46,7 +48,8 @@ h2,h3{color:#075e54;margin-bottom:10px}
 footer{text-align:center;color:#888;padding:18px;font-size:13px}  
 </style>  
 </head>  
-<body>  <header>  
+<body> 
+  <header>  
   <h1>ConnectChat 💬</h1>  
   <div style="display:flex;gap:8px">  
     <button id="profileBtn">👤 Profile</button>  
@@ -508,5 +511,16 @@ logoutBtn.onclick=async()=>{
     logoutBtn.disabled=false;  
   }  
 };  
-</script>  </body>  
+</script>  
+
+  <script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/ConnectChat/service-worker.js")
+      .then(() => console.log("ConnectChat App Ready"))
+      .catch(error => console.error("Service Worker Error:", error));
+  });
+}
+  </script>
+</body>  
   </html>
