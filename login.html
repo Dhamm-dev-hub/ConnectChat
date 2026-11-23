@@ -4,29 +4,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ConnectChat Login</title>
+  <title>ConnectChat - Login</title>
 
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: Arial, sans-serif;
       background: #e9f5f2;
       min-height: 100vh;
       display: flex;
-      justify-content: center;
       align-items: center;
-      padding: 20px;
+      justify-content: center;
+      padding: 18px;
     }
 
     .card {
+      background: white;
       width: 100%;
       max-width: 420px;
-      background: white;
       padding: 28px;
       border-radius: 18px;
       box-shadow: 0 5px 25px #0001;
@@ -66,8 +62,9 @@
       margin-top: 8px;
     }
 
-    button:hover {
-      background: #064c44;
+    button:disabled {
+      opacity: .6;
+      cursor: wait;
     }
 
     .switch {
@@ -82,52 +79,59 @@
       cursor: pointer;
     }
 
-    #signupFields {
-      display: none;
-    }
+    #signupFields { display: none; }
 
     #message {
       margin-top: 15px;
       text-align: center;
       font-size: 14px;
-      color: #075e54;
       overflow-wrap: anywhere;
+    }
+
+    .back {
+      display: block;
+      text-align: center;
+      margin-top: 18px;
+      color: #075e54;
+      text-decoration: none;
     }
   </style>
 </head>
 
 <body>
-
   <div class="card">
     <h1>ConnectChat 💬</h1>
     <p class="subtitle" id="subtitle">Login to your account</p>
 
     <form id="authForm">
-
       <div id="signupFields">
         <input
           type="text"
           id="username"
           placeholder="Username"
+          autocomplete="username"
+          maxlength="20"
         >
       </div>
 
       <input
         type="email"
         id="email"
-        placeholder="Gmail address"
+        placeholder="Email address"
+        autocomplete="email"
         required
       >
 
       <input
         type="password"
         id="password"
-        placeholder="Password"
+        placeholder="Password (minimum 6 characters)"
+        autocomplete="current-password"
+        minlength="6"
         required
       >
 
       <button type="submit" id="submitBtn">Login</button>
-
     </form>
 
     <div class="switch">
@@ -136,45 +140,126 @@
     </div>
 
     <p id="message"></p>
+    <a class="back" href="index.html">← Home Page</a>
   </div>
 
-  <script>
+  <script type="module">
+    import { auth, db } from "./firebase.js";
+    import {
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    import {
+      doc,
+      setDoc,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
     let isSignup = false;
 
+    const form = document.getElementById("authForm");
     const signupFields = document.getElementById("signupFields");
+    const usernameInput = document.getElementById("username");
+    const emailInput = document.getElementById("email");
+    const passwordInput = document.getElementById("password");
     const subtitle = document.getElementById("subtitle");
     const submitBtn = document.getElementById("submitBtn");
     const switchText = document.getElementById("switchText");
     const switchBtn = document.getElementById("switchBtn");
     const message = document.getElementById("message");
 
-    switchBtn.onclick = function () {
+    switchBtn.onclick = () => {
       isSignup = !isSignup;
 
       signupFields.style.display = isSignup ? "block" : "none";
+      usernameInput.required = isSignup;
       subtitle.textContent = isSignup
         ? "Create your new account"
         : "Login to your account";
 
       submitBtn.textContent = isSignup ? "Create Account" : "Login";
-
       switchText.textContent = isSignup
         ? "Already have an account?"
         : "Don't have an account?";
-
       switchBtn.textContent = isSignup ? "Login" : "Sign up";
+      passwordInput.autocomplete = isSignup
+        ? "new-password"
+        : "current-password";
       message.textContent = "";
     };
 
-    document.getElementById("authForm").onsubmit = function (e) {
-      e.preventDefault();
+    form.onsubmit = async (event) => {
+      event.preventDefault();
+      message.style.color = "#075e54";
 
-      message.textContent = isSignup
-        ? "Signup system will be connected soon."
-        : "Login system will be connected soon.";
+      const email = emailInput.value.trim().toLowerCase();
+      const password = passwordInput.value;
+      const username = usernameInput.value.trim();
+
+      if (isSignup && !/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+        message.style.color = "red";
+        message.textContent =
+          "Username 3-20 characters ka ho: letters, numbers ya underscore.";
+        return;
+      }
+
+      submitBtn.disabled = true;
+
+      try {
+        if (isSignup) {
+          message.textContent = "Account create ho raha hai...";
+
+          const credential = await createUserWithEmailAndPassword(
+            auth, email, password
+          );
+
+          message.textContent = "Username save ho raha hai...";
+
+          await setDoc(doc(db, "users", credential.user.uid), {
+            uid: credential.user.uid,
+            username: username,
+            usernameLower: username.toLowerCase(),
+            email: email,
+            about: "Hey! I am using ConnectChat.",
+            photoURL: "",
+            createdAt: serverTimestamp(),
+            lastSeen: serverTimestamp()
+          });
+
+          message.textContent = "Account ban gaya! Home page khul raha hai...";
+          window.location.href = "index.html";
+        } else {
+          message.textContent = "Login ho raha hai...";
+
+          await signInWithEmailAndPassword(auth, email, password);
+
+          message.textContent = "Login successful!";
+          window.location.href = "index.html";
+        }
+      } catch (error) {
+        console.error(error);
+        message.style.color = "red";
+
+        const errors = {
+          "auth/email-already-in-use": "Ye email pehle se registered hai. Login karo.",
+          "auth/invalid-email": "Email address sahi nahi hai.",
+          "auth/weak-password": "Password kam se kam 6 characters ka rakho.",
+          "auth/invalid-credential": "Email ya password galat hai.",
+          "auth/network-request-failed": "Internet connection check karo.",
+          "auth/api-key-not-valid": "Firebase API key sahi nahi hai.",
+          "permission-denied": "Firestore Rules ne save rok diya."
+        };
+
+        message.textContent =
+          errors[error.code] ||
+          error.message ||
+          "Kuch error hua. Dobara try karo.";
+      } finally {
+        submitBtn.disabled = false;
+      }
     };
   </script>
-
 </body>
-    </html>
+  </html>
   
