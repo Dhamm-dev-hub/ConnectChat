@@ -1,659 +1,430 @@
-<!DOCTYPE html>
-<html lang="hi">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ConnectChat</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Arial,sans-serif;background:#f0f2f5;color:#222}
-header{background:#075e54;color:white;padding:15px;display:flex;align-items:center;justify-content:space-between}
-header h1{font-size:21px}
-button{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-size:15px}
-#logoutBtn,#profileBtn{background:white;color:#075e54;font-weight:bold}
-.container{max-width:650px;margin:auto;padding:15px}
-.card{background:white;border-radius:12px;padding:16px;margin-bottom:15px;box-shadow:0 2px 8px #0001}
-h2,h3{color:#075e54;margin-bottom:10px}
-#searchInput{width:100%;padding:13px;border:1px solid #ddd;border-radius:9px;font-size:16px;margin:12px 0}
-.user,.chatItem{padding:14px;border-bottom:1px solid #eee;cursor:pointer}
-.user:hover,.chatItem:hover{background:#f3f8f7}
-.userName{font-weight:bold;color:#075e54;font-size:17px}
-.status{text-align:center;padding:15px;color:#777}
-#chatView,#profileView{display:none}
-.chatHeader{display:flex;align-items:center;gap:10px;border-bottom:1px solid #eee;padding-bottom:12px}
-#backBtn,#profileBackBtn{background:#e8f5f2;color:#075e54}
-#chatUsername{font-weight:bold;color:#075e54;font-size:18px}
-#messages{height:55vh;min-height:300px;overflow-y:auto;padding:12px;background:#e9f5f2;border-radius:10px;margin:12px 0;display:flex;flex-direction:column;gap:8px}
-.msg{max-width:80%;padding:10px 12px;border-radius:12px;overflow-wrap:anywhere}
-.mine{align-self:flex-end;background:#d5f5dc}
-.theirs{align-self:flex-start;background:white}
-#sendForm{display:flex;gap:8px}
-#messageInput{flex:1;min-width:0;padding:12px;border:1px solid #ddd;border-radius:9px;font-size:16px}
-#sendBtn{background:#075e54;color:white;font-weight:bold}
-#sendBtn:disabled{opacity:.5}
-#chatError,#profileMessage{color:#c00;font-size:13px;margin-top:8px}
-.chatItem{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.chatDetails{min-width:0;flex:1}
-.chatPreview{font-size:14px;color:#777;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.chatTime{font-size:12px;color:#888;white-space:nowrap}
-.profileTop{text-align:center;padding:10px}
-#profilePhoto{width:120px;height:120px;border-radius:50%;object-fit:cover;background:#e8f5f2;margin:10px auto;display:none}
-#profileDisplayName{font-size:21px;font-weight:bold;color:#075e54;margin:8px}
-#profileAboutDisplay{color:#666;margin:8px}
-.profileInput{width:100%;padding:12px;border:1px solid #ddd;border-radius:9px;font-size:16px;margin:8px 0}
-.profileLabel{display:block;margin-top:12px;font-weight:bold;color:#075e54}
-#saveProfileBtn{background:#075e54;color:white;font-weight:bold;width:100%;margin-top:12px}
-.photoButtons{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:10px 0}
-#choosePhotoBtn{background:#075e54;color:white}
-#removePhotoBtn{background:#fee;color:#b00020}
-#photoFile{display:none}
-#photoHelp{font-size:13px;color:#777;margin:8px auto;max-width:350px}
-footer{text-align:center;color:#888;padding:18px;font-size:13px}
-</style>
-</head>
-<body>
-
-<header>
-  <h1>ConnectChat 💬</h1>
-  <div style="display:flex;gap:8px">
-    <button id="profileBtn">👤 Profile</button>
-    <button id="logoutBtn">Logout</button>
-  </div>
-</header>
-
-<main class="container">
-
-<!-- HOME -->
-<div id="listView">
-  <div class="card">
-    <h2>Welcome to ConnectChat!</h2>
-    <div id="profileName">Loading...</div>
-  </div>
-
-  <div class="card">
-    <h3>💬 Recent Chats</h3>
-    <div id="recentChats" class="status">Chats load ho rahi hain...</div>
-  </div>
-
-  <div class="card">
-    <h3>👥 Find People</h3>
-    <input id="searchInput" type="search" placeholder="Username search karo...">
-    <div id="usersList" class="status">Users load ho rahe hain...</div>
-  </div>
-</div>
-
-<!-- CHAT -->
-<div id="chatView" class="card">
-  <div class="chatHeader">
-    <button id="backBtn">← Back</button>
-    <div id="chatUsername">Username</div>
-  </div>
-  <div id="messages">
-    <div class="status">Messages load ho rahe hain...</div>
-  </div>
-  <form id="sendForm">
-    <input id="messageInput" type="text" placeholder="Message likho..." autocomplete="off" maxlength="2000" required>
-    <button id="sendBtn" type="submit">Send</button>
-  </form>
-  <div id="chatError"></div>
-</div>
-
-<!-- PROFILE -->
-<div id="profileView" class="card">
-  <div class="chatHeader">
-    <button id="profileBackBtn">← Back</button>
-    <h3>My Profile</h3>
-  </div>
-
-  <div class="profileTop">
-    <img id="profilePhoto" alt="Profile photo">
-    <div id="profileDisplayName">Username</div>
-    <div id="profileAboutDisplay">About</div>
-
-    <div class="photoButtons">
-      <button type="button" id="choosePhotoBtn">📷 Gallery se photo</button>
-      <button type="button" id="removePhotoBtn">🗑️ Photo hatao</button>
-    </div>
-
-    <input type="file" id="photoFile" accept="image/*">
-    <div id="photoHelp">Photo isi browser/device mein save hogi. Maximum 5 MB.</div>
-  </div>
-
-  <form id="profileForm">
-    <label class="profileLabel" for="editUsername">Username</label>
-    <input id="editUsername" class="profileInput" maxlength="20" required>
-
-    <label class="profileLabel" for="editAbout">About</label>
-    <input id="editAbout" class="profileInput" maxlength="100" placeholder="Apne baare mein likho">
-
-    <label class="profileLabel" for="editPhotoURL">Photo URL (optional)</label>
-    <input id="editPhotoURL" class="profileInput" type="url" placeholder="https://...">
-
-    <button id="saveProfileBtn" type="submit">Save Profile</button>
-  </form>
-  <div id="profileMessage"></div>
-</div>
-
-</main>
-<footer>ConnectChat — Connect with everyone</footer>
-
-<script type="module">
-import {auth,db} from "./firebase.js";
-import {onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {
-  collection,getDocs,doc,getDoc,setDoc,addDoc,updateDoc,
-  serverTimestamp,query,orderBy,onSnapshot,where
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-const profileName=document.getElementById("profileName");
-const usersList=document.getElementById("usersList");
-const recentChats=document.getElementById("recentChats");
-const searchInput=document.getElementById("searchInput");
-const logoutBtn=document.getElementById("logoutBtn");
-const profileBtn=document.getElementById("profileBtn");
-const listView=document.getElementById("listView");
-const chatView=document.getElementById("chatView");
-const profileView=document.getElementById("profileView");
-const backBtn=document.getElementById("backBtn");
-const profileBackBtn=document.getElementById("profileBackBtn");
-const chatUsername=document.getElementById("chatUsername");
-const messagesDiv=document.getElementById("messages");
-const sendForm=document.getElementById("sendForm");
-const messageInput=document.getElementById("messageInput");
-const sendBtn=document.getElementById("sendBtn");
-const chatError=document.getElementById("chatError");
-
-const profilePhoto=document.getElementById("profilePhoto");
-const profileDisplayName=document.getElementById("profileDisplayName");
-const profileAboutDisplay=document.getElementById("profileAboutDisplay");
-const profileForm=document.getElementById("profileForm");
-const editUsername=document.getElementById("editUsername");
-const editAbout=document.getElementById("editAbout");
-const editPhotoURL=document.getElementById("editPhotoURL");
-const saveProfileBtn=document.getElementById("saveProfileBtn");
-const profileMessage=document.getElementById("profileMessage");
-const choosePhotoBtn=document.getElementById("choosePhotoBtn");
-const removePhotoBtn=document.getElementById("removePhotoBtn");
-const photoFile=document.getElementById("photoFile");
-
-let currentUser=null;
-let currentProfile={};
-let allUsers=[];
-let activeChatId=null;
-let unsubscribeMessages=null;
-let localPhotoObjectURL=null;
-
-/* Local IndexedDB photo storage */
-function openPhotoDB(){
-  return new Promise((resolve,reject)=>{
-    const request=indexedDB.open("ConnectChatPhotos",1);
-    request.onupgradeneeded=()=>{
-      const database=request.result;
-      if(!database.objectStoreNames.contains("photos")){
-        database.createObjectStore("photos");
-      }
-    };
-    request.onsuccess=()=>resolve(request.result);
-    request.onerror=()=>reject(request.error);
-  });
-}
-
-async function saveLocalPhoto(uid,blob){
-  const database=await openPhotoDB();
-  return new Promise((resolve,reject)=>{
-    const transaction=database.transaction("photos","readwrite");
-    transaction.objectStore("photos").put(blob,uid);
-    transaction.oncomplete=()=>{database.close();resolve();};
-    transaction.onerror=()=>{database.close();reject(transaction.error);};
-  });
-}
-
-async function getLocalPhoto(uid){
-  const database=await openPhotoDB();
-  return new Promise((resolve,reject)=>{
-    const transaction=database.transaction("photos","readonly");
-    const request=transaction.objectStore("photos").get(uid);
-    request.onsuccess=()=>{database.close();resolve(request.result||null);};
-    request.onerror=()=>{database.close();reject(request.error);};
-  });
-}
-
-async function deleteLocalPhoto(uid){
-  const database=await openPhotoDB();
-  return new Promise((resolve,reject)=>{
-    const transaction=database.transaction("photos","readwrite");
-    transaction.objectStore("photos").delete(uid);
-    transaction.oncomplete=()=>{database.close();resolve();};
-    transaction.onerror=()=>{database.close();reject(transaction.error);};
-  });
-}
-
-function setPhotoSource(source){
-  if(localPhotoObjectURL){
-    URL.revokeObjectURL(localPhotoObjectURL);
-    localPhotoObjectURL=null;
-  }
-  if(source){
-    profilePhoto.src=source;
-    profilePhoto.style.display="block";
-    profilePhoto.onerror=()=>{
-      profilePhoto.style.display="none";
-    };
-  }else{
-    profilePhoto.removeAttribute("src");
-    profilePhoto.style.display="none";
-  }
-}
-
-async function displaySavedPhoto(){
-  if(!currentUser)return;
-  try{
-    const localBlob=await getLocalPhoto(currentUser.uid);
-    if(localBlob){
-      localPhotoObjectURL=URL.createObjectURL(localBlob);
-      setPhotoSource(localPhotoObjectURL);
-      return;
-    }
-  }catch(error){
-    console.warn("Local photo load error:",error);
-  }
-  setPhotoSource(currentProfile.photoURL||"");
-}
-
-function updateProfileDisplay(){
-  const username=currentProfile.username||"User";
-  profileName.textContent=username;
-  profileDisplayName.textContent=username;
-  profileAboutDisplay.textContent=currentProfile.about||"Hey! I am using ConnectChat.";
-  editUsername.value=username;
-  editAbout.value=currentProfile.about||"";
-  editPhotoURL.value=currentProfile.photoURL||"";
-  displaySavedPhoto();
-}
-
-onAuthStateChanged(auth,async user=>{
-  if(!user){
-    location.href="login.html";
-    return;
-  }
-  currentUser=user;
-  try{
-    const profileSnap=await getDoc(doc(db,"users",user.uid));
-    currentProfile=profileSnap.exists()?profileSnap.data():{};
-    updateProfileDisplay();
-    await loadUsers();
-    await loadRecentChats();
-  }catch(error){
-    console.error(error);
-    profileName.textContent=currentProfile.username||"User";
-    usersList.textContent="Users load nahi hue: "+error.message;
-    recentChats.textContent="Chats load nahi hui: "+error.message;
-  }
-});
-
-profileBtn.onclick=()=>{
-  listView.style.display="none";
-  chatView.style.display="none";
-  profileView.style.display="block";
-  profileMessage.textContent="";
-};
-
-profileBackBtn.onclick=()=>{
-  profileView.style.display="none";
-  listView.style.display="block";
-};
-
-/* Open phone gallery */
-choosePhotoBtn.onclick=()=>{
-  photoFile.click();
-};
-
-/* Photo selected */
-photoFile.onchange=async()=>{
-  const file=photoFile.files?.[0];
-  if(!file)return;
-
-  if(!file.type.startsWith("image/")){
-    profileMessage.style.color="red";
-    profileMessage.textContent="Image file select karo.";
-    photoFile.value="";
-    return;
-  }
-
-  if(file.size>5*1024*1024){
-    profileMessage.style.color="red";
-    profileMessage.textContent="Photo 5 MB se chhoti honi chahiye.";
-    photoFile.value="";
-    return;
-  }
-
-  choosePhotoBtn.disabled=true;
-  profileMessage.style.color="#075e54";
-  profileMessage.textContent="Photo save ho rahi hai...";
-
-  try{
-    /* Resize/compress image for local storage */
-    const bitmap=await createImageBitmap(file);
-    const maxSide=512;
-    const scale=Math.min(1,maxSide/Math.max(bitmap.width,bitmap.height));
-    const canvas=document.createElement("canvas");
-    canvas.width=Math.round(bitmap.width*scale);
-    canvas.height=Math.round(bitmap.height*scale);
-    const context=canvas.getContext("2d");
-    context.drawImage(bitmap,0,0,canvas.width,canvas.height);
-    bitmap.close();
-
-    const blob=await new Promise(resolve=>{
-      canvas.toBlob(resolve,"image/jpeg",0.82);
-    });
-    if(!blob)throw new Error("Photo convert nahi ho saki.");
-
-    await saveLocalPhoto(currentUser.uid,blob);
-    await displaySavedPhoto();
-    profileMessage.style.color="#075e54";
-    profileMessage.textContent="Profile photo save ho gayi! ✅";
-  }catch(error){
-    console.error(error);
-    profileMessage.style.color="red";
-    profileMessage.textContent="Photo save nahi hui: "+error.message;
-  }finally{
-    choosePhotoBtn.disabled=false;
-    photoFile.value="";
-  }
-};
-
-/* Remove selected photo */
-removePhotoBtn.onclick=async()=>{
-  if(!currentUser)return;
-  removePhotoBtn.disabled=true;
-  profileMessage.style.color="#075e54";
-  profileMessage.textContent="Photo remove ho rahi hai...";
-  try{
-    await deleteLocalPhoto(currentUser.uid);
-    currentProfile.photoURL="";
-    editPhotoURL.value="";
-    await updateDoc(doc(db,"users",currentUser.uid),{
-      photoURL:""
-    });
-    setPhotoSource("");
-    profileMessage.textContent="Profile photo hata di gayi.";
-  }catch(error){
-    console.error(error);
-    profileMessage.style.color="red";
-    profileMessage.textContent="Photo remove nahi hui: "+error.message;
-  }finally{
-    removePhotoBtn.disabled=false;
-  }
-};
-
-profileForm.onsubmit=async event=>{
-  event.preventDefault();
-  const username=editUsername.value.trim();
-  const about=editAbout.value.trim();
-  const photoURL=editPhotoURL.value.trim();
-
-  if(!/^[a-zA-Z0-9_]{3,20}$/.test(username)){
-    profileMessage.textContent="Username 3-20 characters ka ho, letters/numbers/underscore.";
-    return;
-  }
-
-  saveProfileBtn.disabled=true;
-  profileMessage.style.color="#075e54";
-  profileMessage.textContent="Profile save ho rahi hai...";
-
-  try{
-    await updateDoc(doc(db,"users",currentUser.uid),{
-      username,
-      usernameLower:username.toLowerCase(),
-      about,
-      photoURL
-    });
-    currentProfile={...currentProfile,username,usernameLower:username.toLowerCase(),about,photoURL};
-    updateProfileDisplay();
-    await loadUsers();
-    profileMessage.textContent="Profile save ho gayi!";
-  }catch(error){
-    console.error(error);
-    profileMessage.style.color="red";
-    profileMessage.textContent="Save nahi hua: "+error.message;
-  }finally{
-    saveProfileBtn.disabled=false;
-  }
-};
-
-async function loadUsers(){
-  usersList.textContent="Users load ho rahe hain...";
-  try{
-    const snapshot=await getDocs(collection(db,"users"));
-    allUsers=snapshot.docs
-      .map(d=>d.data())
-      .filter(person=>person.uid!==currentUser.uid);
-    renderUsers(searchInput.value);
-  }catch(error){
-    console.error(error);
-    usersList.textContent="Users load nahi hue: "+error.message;
-  }
-}
-
-function renderUsers(search=""){
-  const term=search.trim().toLowerCase();
-  const filtered=allUsers.filter(person=>
-    (person.username||"").toLowerCase().includes(term)
-  );
-  usersList.innerHTML="";
-  if(!filtered.length){
-    usersList.textContent="Koi user nahi mila.";
-    return;
-  }
-  filtered.forEach(person=>{
-    const row=document.createElement("div");
-    row.className="user";
-    const name=document.createElement("div");
-    name.className="userName";
-    name.textContent=person.username||"User";
-    row.appendChild(name);
-    row.onclick=()=>openChat(person);
-    usersList.appendChild(row);
-  });
-}
-searchInput.addEventListener("input",()=>renderUsers(searchInput.value));
-
-async function loadRecentChats(){
-  recentChats.textContent="Chats load ho rahi hain...";
-  try{
-    const chatsQuery=query(
-      collection(db,"chats"),
-      where("members","array-contains",currentUser.uid)
-    );
-    const snapshot=await getDocs(chatsQuery);
-    const chatData=snapshot.docs.map(d=>({id:d.id,...d.data()}));
-    chatData.sort((a,b)=>{
-      const ta=a.updatedAt?.toMillis?.()||0;
-      const tb=b.updatedAt?.toMillis?.()||0;
-      return tb-ta;
-    });
-
-    recentChats.innerHTML="";
-    if(chatData.length===0){
-      recentChats.textContent="Abhi koi chat nahi. Find People se chat shuru karo.";
-      return;
-    }
-
-    for(const chat of chatData){
-      const otherUid=(chat.members||[]).find(uid=>uid!==currentUser.uid);
-      if(!otherUid)continue;
-      let otherProfile={};
-      try{
-        const userSnap=await getDoc(doc(db,"users",otherUid));
-        if(userSnap.exists())otherProfile=userSnap.data();
-      }catch(e){console.warn(e);}
-
-      const row=document.createElement("div");
-      row.className="chatItem";
-      const details=document.createElement("div");
-      details.className="chatDetails";
-      const name=document.createElement("div");
-      name.className="userName";
-      name.textContent=otherProfile.username||"User";
-      const preview=document.createElement("div");
-      preview.className="chatPreview";
-      preview.textContent=chat.lastMessage||"Chat shuru karo";
-      details.append(name,preview);
-      const time=document.createElement("div");
-      time.className="chatTime";
-      time.textContent=formatTime(chat.updatedAt);
-      row.append(details,time);
-      row.onclick=()=>openChat(otherProfile.uid?otherProfile:{uid:otherUid,username:"User"});
-      recentChats.appendChild(row);
-    }
-    if(!recentChats.children.length)recentChats.textContent="Abhi koi chat nahi.";
-  }catch(error){
-    console.error(error);
-    recentChats.textContent="Chats load nahi hui: "+error.message;
-  }
-}
-
-function formatTime(timestamp){
-  if(!timestamp?.toDate)return "";
-  const date=timestamp.toDate();
-  if(date.toDateString()===new Date().toDateString()){
-    return date.toLocaleTimeString("hi-IN",{hour:"2-digit",minute:"2-digit"});
-  }
-  return date.toLocaleDateString("hi-IN",{day:"numeric",month:"short"});
-}
-
-async function openChat(person){
-  if(!person.uid)return;
-  activeChatId=[currentUser.uid,person.uid].sort().join("_");
-  chatUsername.textContent=person.username||"User";
-  listView.style.display="none";
-  profileView.style.display="none";
-  chatView.style.display="block";
-  messagesDiv.innerHTML='<div class="status">Chat khul rahi hai...</div>';
-  chatError.textContent="";
-  messageInput.focus();
-
-  if(unsubscribeMessages){
-    unsubscribeMessages();
-    unsubscribeMessages=null;
-  }
-
-  try{
-    const chatRef=doc(db,"chats",activeChatId);
-    const chatSnap=await getDoc(chatRef);
-    if(!chatSnap.exists()){
-      await setDoc(chatRef,{
-        members:[currentUser.uid,person.uid],
-        createdAt:serverTimestamp(),
-        lastMessage:"",
-        updatedAt:serverTimestamp()
-      });
-    }
-
-    const messagesQuery = query(
-  collection(db, "chats", activeChatId, "messages"),
-  orderBy("createdAt", "asc")
-);
-
-unsubscribeMessages = onSnapshot(messagesQuery, snapshot => {
-  messagesDiv.innerHTML = "";
-
-  if (snapshot.empty) {
-    messagesDiv.innerHTML =
-      '<div class="status">Pehla message bhejo 👋</div>';
-    return;
-  }
-
-  snapshot.forEach(doc => {
-    const msg = doc.data();
-    const div = document.createElement("div");
-
-    div.className = "message " +
-      (msg.senderId === currentUser.uid ? "sent" : "received");
-
-    div.innerHTML = `
-      <div>${escapeHTML(msg.text || "")}</div>
-      <small>${formatTime(msg.createdAt)}</small>
-    `;
-
-    messagesDiv.appendChild(div);
-  });
-
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
-});
-
-}
-
-// Back button
-backBtn.onclick = () => {
-  if (unsubscribeMessages) {
-    unsubscribeMessages();
-    unsubscribeMessages = null;
-  }
-
-  chatView.style.display = "none";
-  homeView.style.display = "block";
-  activeChatId = null;
-};
-
-// Send message
-sendForm.onsubmit = async (e) => {
-  e.preventDefault();
-
-  const text = messageInput.value.trim();
-
-  if (!text || !activeChatId || !currentUser) {
-    return;
-  }
-
-  messageInput.value = "";
-
-  try {
-    const chatRef = doc(db, "chats", activeChatId);
-
-    await addDoc(
-      collection(db, "chats", activeChatId, "messages"),
-      {
-        text: text,
-        senderId: currentUser.uid,
-        createdAt: serverTimestamp()
-      }
-    );
-
-    await updateDoc(chatRef, {
-      lastMessage: text,
-      lastMessageTime: serverTimestamp()
-    });
-
-  } catch (error) {
-    console.error(error);
-    alert("Message send nahi hua: " + error.message);
-  }
-};
-
-// Logout
-logoutBtn.onclick = async () => {
-  try {
-    if (unsubscribeMessages) {
-      unsubscribeMessages();
-      unsubscribeMessages = null;
-    }
-
-    await signOut(auth);
-
-    currentUser = null;
-    activeChatId = null;
-
-    chatView.style.display = "none";
-    homeView.style.display = "none";
-    profileView.style.display = "none";
-    authView.style.display = "block";
-
-  } catch (error) {
-    alert("Logout error: " + error.message);
-  }
-};
-
-</script>
-</body>
-</html>
+<!DOCTYPE html>  <html lang="hi">  
+<head>  
+<meta charset="UTF-8">  
+<meta name="viewport" content="width=device-width, initial-scale=1.0">  
+<title>ConnectChat</title>  
+<style>  
+*{box-sizing:border-box;margin:0;padding:0}  
+body{font-family:Arial,sans-serif;background:#f0f2f5;color:#222}  
+header{background:#075e54;color:white;padding:15px;display:flex;align-items:center;justify-content:space-between}  
+header h1{font-size:21px}  
+button{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-size:15px}  
+#logoutBtn{background:white;color:#075e54;font-weight:bold}  
+#profileBtn{background:white;color:#075e54;font-weight:bold}  
+.container{max-width:650px;margin:auto;padding:15px}  
+.card{background:white;border-radius:12px;padding:16px;margin-bottom:15px;box-shadow:0 2px 8px #0001}  
+h2,h3{color:#075e54;margin-bottom:10px}  
+#searchInput{width:100%;padding:13px;border:1px solid #ddd;border-radius:9px;font-size:16px;margin:12px 0}  
+.user,.chatItem{padding:14px;border-bottom:1px solid #eee;cursor:pointer}  
+.user:hover,.chatItem:hover{background:#f3f8f7}  
+.userName{font-weight:bold;color:#075e54;font-size:17px}  
+.status{text-align:center;padding:15px;color:#777}  
+#chatView,#profileView{display:none}  
+.chatHeader{display:flex;align-items:center;gap:10px;border-bottom:1px solid #eee;padding-bottom:12px}  
+#backBtn,#profileBackBtn{background:#e8f5f2;color:#075e54}  
+#chatUsername{font-weight:bold;color:#075e54;font-size:18px}  
+#messages{height:55vh;min-height:300px;overflow-y:auto;padding:12px;background:#e9f5f2;border-radius:10px;margin:12px 0;display:flex;flex-direction:column;gap:8px}  
+.msg{max-width:80%;padding:10px 12px;border-radius:12px;overflow-wrap:anywhere}  
+.mine{align-self:flex-end;background:#d5f5dc}  
+.theirs{align-self:flex-start;background:white}  
+#sendForm{display:flex;gap:8px}  
+#messageInput{flex:1;min-width:0;padding:12px;border:1px solid #ddd;border-radius:9px;font-size:16px}  
+#sendBtn{background:#075e54;color:white;font-weight:bold}  
+#sendBtn:disabled{opacity:.5}  
+#chatError,#profileMessage{color:#c00;font-size:13px;margin-top:8px}  
+.chatItem{display:flex;align-items:center;justify-content:space-between;gap:10px}  
+.chatDetails{min-width:0;flex:1}  
+.chatPreview{font-size:14px;color:#777;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}  
+.chatTime{font-size:12px;color:#888;white-space:nowrap}  
+.profileTop{text-align:center;padding:10px}  
+#profilePhoto{width:100px;height:100px;border-radius:50%;object-fit:cover;background:#e8f5f2;margin:10px auto;display:block}  
+#profileDisplayName{font-size:21px;font-weight:bold;color:#075e54;margin:8px}  
+#profileAboutDisplay{color:#666;margin:8px}  
+.profileInput{width:100%;padding:12px;border:1px solid #ddd;border-radius:9px;font-size:16px;margin:8px 0}  
+.profileLabel{display:block;margin-top:12px;font-weight:bold;color:#075e54}  
+#saveProfileBtn{background:#075e54;color:white;font-weight:bold;width:100%;margin-top:12px}  
+footer{text-align:center;color:#888;padding:18px;font-size:13px}  
+</style>  
+</head>  
+<body>  <header>  
+  <h1>ConnectChat 💬</h1>  
+  <div style="display:flex;gap:8px">  
+    <button id="profileBtn">👤 Profile</button>  
+    <button id="logoutBtn">Logout</button>  
+  </div>  
+</header>  <main class="container">  <!-- HOME -->  <div id="listView">  
+  <div class="card">  
+    <h2>Welcome to ConnectChat!</h2>  
+    <div id="profileName">Loading...</div>  
+  </div>    <div class="card">  
+    <h3>💬 Recent Chats</h3>  
+    <div id="recentChats" class="status">Chats load ho rahi hain...</div>  
+  </div>    <div class="card">  
+    <h3>👥 Find People</h3>  
+    <input id="searchInput" type="search" placeholder="Username search karo...">  
+    <div id="usersList" class="status">Users load ho rahe hain...</div>  
+  </div>  
+</div>  <!-- CHAT -->  <div id="chatView" class="card">  
+  <div class="chatHeader">  
+    <button id="backBtn">← Back</button>  
+    <div id="chatUsername">Username</div>  
+  </div>  
+  <div id="messages">  
+    <div class="status">Messages load ho rahe hain...</div>  
+  </div>  
+  <form id="sendForm">  
+    <input id="messageInput" type="text" placeholder="Message likho..." autocomplete="off" maxlength="2000" required>  
+    <button id="sendBtn" type="submit">Send</button>  
+  </form>  
+  <div id="chatError"></div>  
+</div>  <!-- PROFILE -->  <div id="profileView" class="card">  
+  <div class="chatHeader">  
+    <button id="profileBackBtn">← Back</button>  
+    <h3>My Profile</h3>  
+  </div>    <div class="profileTop">  
+    <img id="profilePhoto" src="" alt="Profile photo">  
+    <div id="profileDisplayName">Username</div>  
+    <div id="profileAboutDisplay">About</div>  
+  </div>    <form id="profileForm">  
+    <label class="profileLabel" for="editUsername">Username</label>  
+    <input id="editUsername" class="profileInput" maxlength="20" required>  <label class="profileLabel" for="editAbout">About</label>  
+<input id="editAbout" class="profileInput" maxlength="100" placeholder="Apne baare mein likho">  
+
+<label class="profileLabel" for="editPhotoURL">Profile photo URL (optional)</label>  
+<input id="editPhotoURL" class="profileInput" type="url" placeholder="https://...">  
+
+<button id="saveProfileBtn" type="submit">Save Profile</button>
+
+  </form>  
+  <div id="profileMessage"></div>  
+</div>  </main>  
+<footer>ConnectChat — Connect with everyone</footer>  <script type="module">  
+import {auth,db} from "./firebase.js";  
+import {onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";  
+import {  
+  collection,getDocs,doc,getDoc,setDoc,addDoc,updateDoc,  
+  serverTimestamp,query,orderBy,onSnapshot,where  
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";  
+  
+const profileName=document.getElementById("profileName");  
+const usersList=document.getElementById("usersList");  
+const recentChats=document.getElementById("recentChats");  
+const searchInput=document.getElementById("searchInput");  
+const logoutBtn=document.getElementById("logoutBtn");  
+const profileBtn=document.getElementById("profileBtn");  
+const listView=document.getElementById("listView");  
+const chatView=document.getElementById("chatView");  
+const profileView=document.getElementById("profileView");  
+const backBtn=document.getElementById("backBtn");  
+const profileBackBtn=document.getElementById("profileBackBtn");  
+const chatUsername=document.getElementById("chatUsername");  
+const messagesDiv=document.getElementById("messages");  
+const sendForm=document.getElementById("sendForm");  
+const messageInput=document.getElementById("messageInput");  
+const sendBtn=document.getElementById("sendBtn");  
+const chatError=document.getElementById("chatError");  
+  
+const profilePhoto=document.getElementById("profilePhoto");  
+const profileDisplayName=document.getElementById("profileDisplayName");  
+const profileAboutDisplay=document.getElementById("profileAboutDisplay");  
+const profileForm=document.getElementById("profileForm");  
+const editUsername=document.getElementById("editUsername");  
+const editAbout=document.getElementById("editAbout");  
+const editPhotoURL=document.getElementById("editPhotoURL");  
+const saveProfileBtn=document.getElementById("saveProfileBtn");  
+const profileMessage=document.getElementById("profileMessage");  
+  
+let currentUser=null;  
+let currentProfile={};  
+let allUsers=[];  
+let activeChatId=null;  
+let unsubscribeMessages=null;  
+  
+onAuthStateChanged(auth,async user=>{  
+  if(!user){  
+    location.href="login.html";  
+    return;  
+  }  
+  currentUser=user;  
+  try{  
+    const profileSnap=await getDoc(doc(db,"users",user.uid));  
+    currentProfile=profileSnap.exists()?profileSnap.data():{};  
+    updateProfileDisplay();  
+    await loadUsers();  
+    await loadRecentChats();  
+  }catch(error){  
+    console.error(error);  
+    profileName.textContent=currentProfile.username||"User";  
+    usersList.textContent="Users load nahi hue: "+error.message;  
+    recentChats.textContent="Chats load nahi hui: "+error.message;  
+  }  
+});  
+  
+function updateProfileDisplay(){  
+  const username=currentProfile.username||"User";  
+  profileName.textContent=username;  
+  profileDisplayName.textContent=username;  
+  profileAboutDisplay.textContent=currentProfile.about||"Hey! I am using ConnectChat.";  
+  editUsername.value=username;  
+  editAbout.value=currentProfile.about||"";  
+  editPhotoURL.value=currentProfile.photoURL||"";  
+  profilePhoto.src=currentProfile.photoURL||"";  
+  profilePhoto.style.display=currentProfile.photoURL?"block":"none";  
+}  
+  
+profileBtn.onclick=()=>{  
+  listView.style.display="none";  
+  chatView.style.display="none";  
+  profileView.style.display="block";  
+  profileMessage.textContent="";  
+};  
+  
+profileBackBtn.onclick=()=>{  
+  profileView.style.display="none";  
+  listView.style.display="block";  
+};  
+  
+profileForm.onsubmit=async event=>{  
+  event.preventDefault();  
+  const username=editUsername.value.trim();  
+  const about=editAbout.value.trim();  
+  const photoURL=editPhotoURL.value.trim();  
+  
+  if(!/^[a-zA-Z0-9_]{3,20}$/.test(username)){  
+    profileMessage.textContent="Username 3-20 characters ka ho, letters/numbers/underscore.";  
+    return;  
+  }  
+  
+  saveProfileBtn.disabled=true;  
+  profileMessage.style.color="#075e54";  
+  profileMessage.textContent="Profile save ho rahi hai...";  
+  
+  try{  
+    await updateDoc(doc(db,"users",currentUser.uid),{  
+      username,  
+      usernameLower:username.toLowerCase(),  
+      about,  
+      photoURL  
+    });  
+    currentProfile={...currentProfile,username,usernameLower:username.toLowerCase(),about,photoURL};  
+    updateProfileDisplay();  
+    await loadUsers();  
+    profileMessage.textContent="Profile save ho gayi!";  
+  }catch(error){  
+    console.error(error);  
+    profileMessage.style.color="red";  
+    profileMessage.textContent="Save nahi hua: "+error.message;  
+  }finally{  
+    saveProfileBtn.disabled=false;  
+  }  
+};  
+  
+async function loadUsers(){  
+  usersList.textContent="Users load ho rahe hain...";  
+  try{  
+    const snapshot=await getDocs(collection(db,"users"));  
+    allUsers=snapshot.docs  
+      .map(d=>d.data())  
+      .filter(person=>person.uid!==currentUser.uid);  
+    renderUsers(searchInput.value);  
+  }catch(error){  
+    console.error(error);  
+    usersList.textContent="Users load nahi hue: "+error.message;  
+  }  
+}  
+  
+function renderUsers(search=""){  
+  const term=search.trim().toLowerCase();  
+  const filtered=allUsers.filter(person=>  
+    (person.username||"").toLowerCase().includes(term)  
+  );  
+  usersList.innerHTML="";  
+  if(!filtered.length){  
+    usersList.textContent="Koi user nahi mila.";  
+    return;  
+  }  
+  filtered.forEach(person=>{  
+    const row=document.createElement("div");  
+    row.className="user";  
+    const name=document.createElement("div");  
+    name.className="userName";  
+    name.textContent=person.username||"User";  
+    row.appendChild(name);  
+    row.onclick=()=>openChat(person);  
+    usersList.appendChild(row);  
+  });  
+}  
+searchInput.addEventListener("input",()=>renderUsers(searchInput.value));  
+  
+async function loadRecentChats(){  
+  recentChats.textContent="Chats load ho rahi hain...";  
+  try{  
+    const chatsQuery=query(  
+      collection(db,"chats"),  
+      where("members","array-contains",currentUser.uid)  
+    );  
+    const snapshot=await getDocs(chatsQuery);  
+    const chatData=snapshot.docs.map(d=>({id:d.id,...d.data()}));  
+    chatData.sort((a,b)=>{  
+      const ta=a.updatedAt?.toMillis?.()||0;  
+      const tb=b.updatedAt?.toMillis?.()||0;  
+      return tb-ta;  
+    });  
+  
+    recentChats.innerHTML="";  
+    if(chatData.length===0){  
+      recentChats.textContent="Abhi koi chat nahi. Find People se chat shuru karo.";  
+      return;  
+    }  
+  
+    for(const chat of chatData){  
+      const otherUid=(chat.members||[]).find(uid=>uid!==currentUser.uid);  
+      if(!otherUid)continue;  
+      let otherProfile={};  
+      try{  
+        const userSnap=await getDoc(doc(db,"users",otherUid));  
+        if(userSnap.exists())otherProfile=userSnap.data();  
+      }catch(e){console.warn(e);}  
+  
+      const row=document.createElement("div");  
+      row.className="chatItem";  
+      const details=document.createElement("div");  
+      details.className="chatDetails";  
+      const name=document.createElement("div");  
+      name.className="userName";  
+      name.textContent=otherProfile.username||"User";  
+      const preview=document.createElement("div");  
+      preview.className="chatPreview";  
+      preview.textContent=chat.lastMessage||"Chat shuru karo";  
+      details.append(name,preview);  
+      const time=document.createElement("div");  
+      time.className="chatTime";  
+      time.textContent=formatTime(chat.updatedAt);  
+      row.append(details,time);  
+      row.onclick=()=>openChat(otherProfile.uid?otherProfile:{uid:otherUid,username:"User"});  
+      recentChats.appendChild(row);  
+    }  
+    if(!recentChats.children.length)recentChats.textContent="Abhi koi chat nahi.";  
+  }catch(error){  
+    console.error(error);  
+    recentChats.textContent="Chats load nahi hui: "+error.message;  
+  }  
+}  
+  
+function formatTime(timestamp){  
+  if(!timestamp?.toDate)return "";  
+  const date=timestamp.toDate();  
+  if(date.toDateString()===new Date().toDateString()){  
+    return date.toLocaleTimeString("hi-IN",{hour:"2-digit",minute:"2-digit"});  
+  }  
+  return date.toLocaleDateString("hi-IN",{day:"numeric",month:"short"});  
+}  
+  
+async function openChat(person){  
+  if(!person.uid)return;  
+  activeChatId=[currentUser.uid,person.uid].sort().join("_");  
+  chatUsername.textContent=person.username||"User";  
+  listView.style.display="none";  
+  profileView.style.display="none";  
+  chatView.style.display="block";  
+  messagesDiv.innerHTML='<div class="status">Chat khul rahi hai...</div>';  
+  chatError.textContent="";  
+  messageInput.focus();  
+  
+  if(unsubscribeMessages){  
+    unsubscribeMessages();  
+    unsubscribeMessages=null;  
+  }  
+  
+  try{  
+    const chatRef=doc(db,"chats",activeChatId);  
+    const chatSnap=await getDoc(chatRef);  
+    if(!chatSnap.exists()){  
+      await setDoc(chatRef,{  
+        members:[currentUser.uid,person.uid],  
+        createdAt:serverTimestamp(),  
+        lastMessage:"",  
+        updatedAt:serverTimestamp()  
+      });  
+    }  
+  
+    const messagesQuery=query(  
+      collection(db,"chats",activeChatId,"messages"),  
+      orderBy("createdAt","asc")  
+    );  
+    unsubscribeMessages=onSnapshot(messagesQuery,snapshot=>{  
+      messagesDiv.innerHTML="";  
+      if(snapshot.empty){  
+        messagesDiv.innerHTML='<div class="status">Pehla message bhejo 👋</div>';  
+        return;  
+      }  
+      snapshot.forEach(messageDoc=>{  
+        const msg=messageDoc.data();  
+        const bubble=document.createElement("div");  
+        bubble.className="msg "+(msg.senderId===currentUser.uid?"mine":"theirs");  
+        bubble.textContent=msg.text||"";  
+        messagesDiv.appendChild(bubble);  
+      });  
+      messagesDiv.scrollTop=messagesDiv.scrollHeight;  
+    },error=>{  
+      console.error(error);  
+      chatError.textContent="Messages load error: "+error.message;  
+    });  
+  }catch(error){  
+    console.error(error);  
+    chatError.textContent="Chat open nahi hui: "+error.message;  
+    messagesDiv.innerHTML='<div class="status">Chat load nahi ho saki.</div>';  
+  }  
+}  
+  
+backBtn.onclick=()=>{  
+  chatView.style.display="none";  
+  listView.style.display="block";  
+  if(unsubscribeMessages){  
+    unsubscribeMessages();  
+    unsubscribeMessages=null;  
+  }  
+  activeChatId=null;  
+};  
+  
+sendForm.onsubmit=async event=>{  
+  event.preventDefault();  
+  const text=messageInput.value.trim();  
+  if(!text||!activeChatId)return;  
+  sendBtn.disabled=true;  
+  chatError.textContent="";  
+  try{  
+    const chatRef=doc(db,"chats",activeChatId);  
+    await addDoc(collection(db,"chats",activeChatId,"messages"),{  
+      text,  
+      senderId:currentUser.uid,  
+      senderUsername:currentProfile.username||"User",  
+      createdAt:serverTimestamp()  
+    });  
+    await updateDoc(chatRef,{  
+      lastMessage:text,  
+      updatedAt:serverTimestamp()  
+    });  
+    messageInput.value="";  
+    messageInput.focus();  
+    await loadRecentChats();  
+  }catch(error){  
+    console.error(error);  
+    chatError.textContent="Message send nahi hua: "+error.message;  
+  }finally{  
+    sendBtn.disabled=false;  
+  }  
+};  
+  
+logoutBtn.onclick=async()=>{  
+  logoutBtn.disabled=true;  
+  try{  
+    await signOut(auth);  
+    location.href="login.html";  
+  }catch(error){  
+    alert("Logout error: "+error.message);  
+    logoutBtn.disabled=false;  
+  }  
+};  
+</script>  </body>  
+  </html>
