@@ -2,8 +2,6 @@
 <head>  
 <meta charset="UTF-8">  
 <meta name="viewport" content="width=device-width, initial-scale=1.0">  
-  <link rel="manifest" href="/ConnectChat/manifest.json">
-<meta name="theme-color" content="#128C7E">
 <title>ConnectChat</title>  
 <style>  
 *{box-sizing:border-box;margin:0;padding:0}  
@@ -48,8 +46,7 @@ h2,h3{color:#075e54;margin-bottom:10px}
 footer{text-align:center;color:#888;padding:18px;font-size:13px}  
 </style>  
 </head>  
-<body> 
-  <header>  
+<body>  <header>  
   <h1>ConnectChat 💬</h1>  
   <div style="display:flex;gap:8px">  
     <button id="profileBtn">👤 Profile</button>  
@@ -75,32 +72,10 @@ footer{text-align:center;color:#888;padding:18px;font-size:13px}
   <div id="messages">  
     <div class="status">Messages load ho rahe hain...</div>  
   </div>  
-
-<form id="sendForm">
-  <input
-    id="messageInput"
-    type="text"
-    placeholder="Message likho..."
-    autocomplete="off"
-    maxlength="2000"
-    required
-  >
-
-  <button type="button" id="attachBtn">📎</button>
-
-  <input
-    type="file"
-    id="fileInput"
-    accept="image/*,.pdf,.doc,.docx,.txt"
-    hidden
-  >
-
-  <button id="sendBtn" type="submit">Send</button>
-</form>
-
-<div id="filePreview"></div>
-  
-  
+  <form id="sendForm">  
+    <input id="messageInput" type="text" placeholder="Message likho..." autocomplete="off" maxlength="2000" required>  
+    <button id="sendBtn" type="submit">Send</button>  
+  </form>  
   <div id="chatError"></div>  
 </div>  <!-- PROFILE -->  <div id="profileView" class="card">  
   <div class="chatHeader">  
@@ -131,15 +106,12 @@ import {
   collection,getDocs,doc,getDoc,setDoc,addDoc,updateDoc,  
   serverTimestamp,query,orderBy,onSnapshot,where  
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";  
-    
-import {
+    import {
   getDatabase,
   ref,
   onValue,
   onDisconnect,
-  set,
-  get,
-  update
+  set
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
   
 const profileName=document.getElementById("profileName");  
@@ -189,8 +161,11 @@ const messagesDiv=document.getElementById("messages");
 const sendForm=document.getElementById("sendForm");  
 const messageInput=document.getElementById("messageInput");  
 const sendBtn=document.getElementById("sendBtn");  
-const chatError=document.getElementById("chatError");  
-  
+const chatError=document.getElementById("chatError");
+const attachBtn=document.getElementById("attachBtn");
+const fileInput=document.getElementById("fileInput");
+const filePreview=document.getElementById("filePreview");
+
 const profilePhoto=document.getElementById("profilePhoto");  
 const profileDisplayName=document.getElementById("profileDisplayName");  
 const profileAboutDisplay=document.getElementById("profileAboutDisplay");  
@@ -205,8 +180,26 @@ let currentUser=null;
 let currentProfile={};  
 let allUsers=[];  
 let activeChatId=null;  
-let unsubscribeMessages=null;  
-  
+let unsubscribeMessages=null;
+
+// WebRTC direct file transfer (5 MB limit; both users should keep chat open)
+let peerConnection=null;
+let dataChannel=null;
+let currentSignalId=null;
+let activePeerUid=null;
+let isCaller=false;
+let unsubscribeSignal=null;
+let unsubscribeIncomingSignals=null;
+let unsubscribeRemoteCandidates=null;
+let remoteDescriptionReady=false;
+let pendingRemoteCandidates=[];
+let receivedFileMeta=null;
+let receivedFileChunks=[];
+let receivedFileBytes=0;
+const MAX_FILE_SIZE=5*1024*1024;
+const FILE_CHUNK_SIZE=16*1024;
+const rtcConfig={iceServers:[{urls:"stun:stun.l.google.com:19302"}]};
+
 onAuthStateChanged(auth,async user=>{  
   if(!user){  
     location.href="login.html";  
@@ -263,7 +256,6 @@ profileForm.onsubmit=async event=>{
     profileMessage.textContent="Username 3-20 characters ka ho, letters/numbers/underscore.";  
     return;  
   }  
-  
   saveProfileBtn.disabled=true;  
   profileMessage.style.color="#075e54";  
   profileMessage.textContent="Profile save ho rahi hai...";  
@@ -430,8 +422,161 @@ function formatTime(timestamp){
   return date.toLocaleDateString("hi-IN",{day:"numeric",month:"short"});  
 }  
   
-async function openChat(person){  
-  if(!person.uid)return;  
+// ---------- WEBRTC SIGNALING + FILE TRANSFER ----------
+async function saveIceCandidate(candidate, collectionName) {
+  if (!activeChatId || !currentSignalId) return;
+  try {
+    await addDoc(collection(db,"chats",activeChatId,"signals",currentSignalId,collectionName),candidate.toJSON());
+  } catch (error) { console.error("ICE save error:",error); }
+}
+
+function stopWebRTC(){
+  if(unsubscribeSignal){unsubscribeSignal();unsubscribeSignal=null;}
+  if(unsubscribeIncomingSignals){unsubscribeIncomingSignals();unsubscribeIncomingSignals=null;}
+  if(unsubscribeRemoteCandidates){unsubscribeRemoteCandidates();unsubscribeRemoteCandidates=null;}
+  if(dataChannel){try{dataChannel.close();}catch(e){} dataChannel=null;}
+  if(peerConnection){try{peerConnection.close();}catch(e){} peerConnection=null;}
+  currentSignalId=null; activePeerUid=null; isCaller=false;
+  remoteDescriptionReady=false; pendingRemoteCandidates=[];
+  receivedFileMeta=null; receivedFileChunks=[]; receivedFileBytes=0;
+}
+
+function createPeerConnection(){
+  peerConnection=new RTCPeerConnection(rtcConfig);
+  peerConnection.ondatachannel=(event)=>{dataChannel=event.channel;setupDataChannel();};
+  peerConnection.onicecandidate=async(event)=>{
+    if(event.candidate){await saveIceCandidate(event.candidate,isCaller?"callerCandidates":"calleeCandidates");}
+  };
+  peerConnection.onconnectionstatechange=()=>{
+    console.log("WebRTC state:",peerConnection?.connectionState);
+    if(peerConnection?.connectionState==="failed") chatError.textContent="File connection fail hua. Network/STUN issue ho sakta hai.";
+  };
+  return peerConnection;
+    }
+    function setupDataChannel(){
+  if(!dataChannel)return;
+  dataChannel.binaryType="arraybuffer";
+  dataChannel.onopen=()=>{filePreview.textContent="File connection ready. File bhej sakte hain.";};
+  dataChannel.onclose=()=>{console.log("File data channel closed");};
+  dataChannel.onerror=(e)=>console.error("Data channel error:",e);
+  dataChannel.onmessage=(event)=>{
+    if(typeof event.data==="string"){
+      let packet;try{packet=JSON.parse(event.data);}catch(e){return;}
+      if(packet.type==="file-meta"){
+        receivedFileMeta=packet;
+        receivedFileChunks=[];receivedFileBytes=0;
+        filePreview.textContent="File receive ho rahi hai: "+packet.name;
+      }else if(packet.type==="file-end"){
+        if(!receivedFileMeta)return;
+        const blob=new Blob(receivedFileChunks,{type:receivedFileMeta.mime||"application/octet-stream"});
+        const url=URL.createObjectURL(blob);
+        const link=document.createElement("a");link.href=url;link.download=receivedFileMeta.name||"received-file";link.textContent="Download received file: "+link.download;
+        link.style.display="block";link.style.marginTop="8px";
+        filePreview.appendChild(link);
+        filePreview.insertAdjacentText("beforeend"," ("+Math.round(blob.size/1024)+" KB)");
+        receivedFileChunks=[];receivedFileMeta=null;receivedFileBytes=0;
+      }
+    }else{
+      if(receivedFileMeta){receivedFileChunks.push(event.data);receivedFileBytes+=event.data.byteLength;}
+    }
+  };
+}
+
+async function addRemoteCandidate(candidate){
+  if(!peerConnection)return;
+  if(!remoteDescriptionReady){pendingRemoteCandidates.push(candidate);return;}
+  try{await peerConnection.addIceCandidate(candidate);}catch(e){console.warn("Remote ICE candidate:",e);}
+}
+
+function listenRemoteCandidates(){
+  if(unsubscribeRemoteCandidates)unsubscribeRemoteCandidates();
+  const remoteBucket=isCaller?"calleeCandidates":"callerCandidates";
+  const q=collection(db,"chats",activeChatId,"signals",currentSignalId,remoteBucket);
+  unsubscribeRemoteCandidates=onSnapshot(q,snap=>{
+    snap.docChanges().forEach(change=>{
+      if(change.type==="added")addRemoteCandidate(new RTCIceCandidate(change.doc.data()));
+    });
+  },err=>console.error("Remote ICE listener error:",err));
+}
+
+async function flushRemoteCandidates(){
+  remoteDescriptionReady=true;
+  const queued=pendingRemoteCandidates.splice(0);
+  for(const candidate of queued){try{await peerConnection.addIceCandidate(candidate);}catch(e){console.warn(e);}}
+}
+
+async function startFileTransfer(file){
+  if(!file)return;
+  if(!activeChatId||!activePeerUid){alert("Pehle chat khol lo.");return;}
+  if(file.size>MAX_FILE_SIZE){alert("Abhi file 5 MB se chhoti honi chahiye.");fileInput.value="";return;}
+  const peerUid=activePeerUid;
+  stopWebRTC();
+  activePeerUid=peerUid;
+  isCaller=true;
+  const signalsRef=collection(db,"chats",activeChatId,"signals");
+  const signalDoc=await addDoc(signalsRef,{callerUid:currentUser.uid,calleeUid:activePeerUid,status:"offering",createdAt:serverTimestamp()});
+  currentSignalId=signalDoc.id;
+  createPeerConnection();
+  dataChannel=peerConnection.createDataChannel("file-transfer");setupDataChannel();
+  listenRemoteCandidates();
+  const offer=await peerConnection.createOffer();await peerConnection.setLocalDescription(offer);
+  await updateDoc(signalDoc,{offer:{type:offer.type,sdp:offer.sdp}});
+  unsubscribeSignal=onSnapshot(signalDoc,async snap=>{
+    const data=snap.data();
+    if(data?.answer&&!peerConnection.currentRemoteDescription){
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+      await flushRemoteCandidates();
+    }
+  },err=>console.error("Signal listener:",err));
+  filePreview.textContent="File connection ke liye doosre user ka chat open hona zaroori hai...";
+  filePreview.dataset.pendingFile="";
+  // Once the channel opens, send the selected file.
+  dataChannel.onopen=async()=>{
+    filePreview.textContent="File bheji ja rahi hai: "+file.name;
+    dataChannel.send(JSON.stringify({type:"file-meta",name:file.name,size:file.size,mime:file.type||"application/octet-stream"}));
+    const buffer=await file.arrayBuffer();
+    for(let offset=0;offset<buffer.byteLength;offset+=FILE_CHUNK_SIZE){
+      while(dataChannel.bufferedAmount>1024*1024){await new Promise(resolve=>setTimeout(resolve,40));}
+      dataChannel.send(buffer.slice(offset,offset+FILE_CHUNK_SIZE));
+    }
+    dataChannel.send(JSON.stringify({type:"file-end"}));
+    filePreview.textContent="File send ho gayi: "+file.name;
+  };
+}
+
+function listenForIncomingOffers(peerUid){
+  if(unsubscribeIncomingSignals)unsubscribeIncomingSignals();
+  const q=query(collection(db,"chats",activeChatId,"signals"),where("calleeUid","==",currentUser.uid),where("callerUid","==",peerUid),where("status","==","offering"));
+  unsubscribeIncomingSignals=onSnapshot(q,snapshot=>{
+    snapshot.docChanges().forEach(async change=>{
+      if(change.type!=="added")return;
+      const signalDoc=change.doc;const signal=signalDoc.data();
+      if(!signal.offer||peerConnection)return;
+      currentSignalId=signalDoc.id;activePeerUid=peerUid;isCaller=false;
+      createPeerConnection();listenRemoteCandidates();
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(signal.offer));
+      await flushRemoteCandidates();
+      const answer=await peerConnection.createAnswer();await peerConnection.setLocalDescription(answer);
+      await updateDoc(signalDoc.ref,{answer:{type:answer.type,sdp:answer.sdp},status:"answered"});
+      filePreview.textContent="Incoming file connection...";
+    });
+  },error=>console.error("Incoming offer listener:",error));
+}
+
+attachBtn.onclick=()=>fileInput.click();
+fileInput.onchange=()=>{
+  const file=fileInput.files?.[0];if(!file)return;
+  filePreview.textContent="Selected: "+file.name+" ("+Math.round(file.size/1024)+" KB)";
+  if(file.size>MAX_FILE_SIZE){alert("File 5 MB se chhoti honi chahiye.");fileInput.value="";filePreview.textContent="";return;}
+  if(confirm("Is file ko chat partner ko bheje? Dono users ka chat open rehna chahiye.")){
+    startFileTransfer(file).catch(error=>{console.error(error);chatError.textContent="File send setup error: "+error.message;});
+  }
+};
+
+async function openChat(person){
+  if(!person.uid)return;
+  stopWebRTC();
+  activePeerUid=person.uid;
   activeChatId=[currentUser.uid,person.uid].sort().join("_");  
   chatUsername.textContent=person.username||"User";  
   listView.style.display="none";  
@@ -458,7 +603,8 @@ async function openChat(person){
       });  
     }  
   
-    const messagesQuery=query(  
+    listenForIncomingOffers(person.uid);
+    const messagesQuery=query(
       collection(db,"chats",activeChatId,"messages"),  
       orderBy("createdAt","asc")  
     );  
@@ -486,8 +632,9 @@ async function openChat(person){
     messagesDiv.innerHTML='<div class="status">Chat load nahi ho saki.</div>';  
   }  
 }  
-  
-backBtn.onclick=()=>{  
+    backBtn.onclick=()=>{
+  stopWebRTC();
+  fileInput.value="";filePreview.textContent="";
   chatView.style.display="none";  
   listView.style.display="block";  
   if(unsubscribeMessages){  
@@ -496,31 +643,7 @@ backBtn.onclick=()=>{
   }  
   activeChatId=null;  
 };  
-
   
-const attachBtn = document.getElementById("attachBtn");
-const fileInput = document.getElementById("fileInput");
-const filePreview = document.getElementById("filePreview");
-
-attachBtn.addEventListener("click", () => {
-  fileInput.click();
-});
-
-fileInput.addEventListener("change", () => {
-  const file = fileInput.files[0];
-
-  if (!file) return;
-
-  if (file.size > 5 * 1024 * 1024) {
-    alert("File 5 MB se chhoti honi chahiye.");
-    fileInput.value = "";
-    filePreview.textContent = "";
-    return;
-  }
-
-  filePreview.textContent = "Selected: " + file.name;
-});
-    
 sendForm.onsubmit=async event=>{  
   event.preventDefault();  
   const text=messageInput.value.trim();  
@@ -550,7 +673,8 @@ sendForm.onsubmit=async event=>{
   }  
 };  
   
-logoutBtn.onclick=async()=>{  
+logoutBtn.onclick=async()=>{
+  stopWebRTC();
   logoutBtn.disabled=true;  
   try{  
     await signOut(auth);  
@@ -560,78 +684,7 @@ logoutBtn.onclick=async()=>{
     logoutBtn.disabled=false;  
   }  
 };  
-</script>  
-
-  <script>
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/ConnectChat/service-worker.js")
-      .then(() => console.log("ConnectChat App Ready"))
-      .catch(error => console.error("Service Worker Error:", error));
-  });
-}
-  </script>
-  
-<button id="installAppBtn" style="
-  p
-  display:none;
-  position:fixed;
-  bottom:20px;
-  right:20px;
-  z-index:9999;
-  background:#128C7E;
-  color:white;
-  border:none;
-  padding:14px 20px;
-  border-radius:30px;
-  font-size:16px;
-  font-weight:bold;
-  box-shadow:0 4px 12px #0003;
-">
-  ⬇ Install App
-</button>
-
-
-<script>
-let deferredInstallPrompt;
-const installBtn = document.getElementById("installAppBtn");
-
-const isAppInstalled =
-  window.matchMedia("(display-mode: standalone)").matches ||
-  window.navigator.standalone === true;
-
-// Agar app pehle se installed hai
-if (isAppInstalled) {
-  installBtn.style.display = "none";
-} else {
-
-  window.addEventListener("beforeinstallprompt", (event) => {
-    event.preventDefault();
-    deferredInstallPrompt = event;
-    installBtn.style.display = "block";
-  });
-
-  installBtn.addEventListener("click", async () => {
-    if (!deferredInstallPrompt) return;
-
-    deferredInstallPrompt.prompt();
-
-    const choice = await deferredInstallPrompt.userChoice;
-
-    if (choice.outcome === "accepted") {
-      installBtn.style.display = "none";
-    }
-
-    deferredInstallPrompt = null;
-  });
-
-  window.addEventListener("appinstalled", () => {
-    installBtn.style.display = "none";
-    deferredInstallPrompt = null;
-    alert("ConnectChat successfully installed!");
-  });
-}
-  </script>
-  
-</body>  
+</script>  </body>  
   </html>
+
+  
