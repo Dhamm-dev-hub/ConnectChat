@@ -493,7 +493,31 @@ backBtn.onclick=()=>{
   }  
   activeChatId=null;  
 };  
+
   
+const attachBtn = document.getElementById("attachBtn");
+const fileInput = document.getElementById("fileInput");
+const filePreview = document.getElementById("filePreview");
+
+attachBtn.addEventListener("click", () => {
+  fileInput.click();
+});
+
+fileInput.addEventListener("change", () => {
+  const file = fileInput.files[0];
+
+  if (!file) return;
+
+  if (file.size > 5 * 1024 * 1024) {
+    alert("File 5 MB se chhoti honi chahiye.");
+    fileInput.value = "";
+    filePreview.textContent = "";
+    return;
+  }
+
+  filePreview.textContent = "Selected: " + file.name;
+});
+    
 sendForm.onsubmit=async event=>{  
   event.preventDefault();  
   const text=messageInput.value.trim();  
