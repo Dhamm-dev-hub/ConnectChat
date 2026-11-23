@@ -7,11 +7,7 @@
   <title>ConnectChat</title>
 
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: Arial, sans-serif;
@@ -22,36 +18,45 @@
     header {
       background: #075e54;
       color: white;
-      padding: 18px;
+      padding: 16px;
       display: flex;
-      align-items: center;
       justify-content: space-between;
+      align-items: center;
     }
 
-    header h1 {
-      font-size: 23px;
+    header h1 { font-size: 22px; }
+
+    button {
+      border: none;
+      cursor: pointer;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 15px;
+    }
+
+    #logoutBtn {
+      background: white;
+      color: #075e54;
+      font-weight: bold;
     }
 
     .container {
-      max-width: 600px;
+      max-width: 650px;
       margin: auto;
-      padding: 20px;
+      padding: 18px;
     }
 
-    .welcome {
+    .card {
       background: white;
-      padding: 20px;
       border-radius: 12px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 8px #0001;
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px #0000000d;
     }
 
-    .welcome h2 {
-      color: #075e54;
-      margin-bottom: 8px;
-    }
+    h2, h3 { color: #075e54; margin-bottom: 10px; }
 
-    .search {
+    #searchInput {
       width: 100%;
       padding: 14px;
       border: 1px solid #ddd;
@@ -60,22 +65,39 @@
       margin: 15px 0;
     }
 
-    .section {
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      margin-bottom: 15px;
+    .user {
+      padding: 14px 0;
+      border-bottom: 1px solid #eee;
     }
 
-    .section h3 {
+    .user:last-child { border-bottom: none; }
+
+    .userName {
+      font-weight: bold;
       color: #075e54;
-      margin-bottom: 12px;
+      margin-bottom: 5px;
     }
 
-    .empty {
-      text-align: center;
+    .userEmail {
+      font-size: 14px;
       color: #777;
-      padding: 30px 10px;
+    }
+
+    .status {
+      color: #777;
+      text-align: center;
+      padding: 15px;
+    }
+
+    #profileName {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    #profileEmail {
+      color: #666;
+      overflow-wrap: anywhere;
     }
 
     footer {
@@ -91,48 +113,154 @@
 
 <header>
   <h1>ConnectChat 💬</h1>
-
-  <a href="login.html" style="
-    color:white;
-    background:#128c7e;
-    padding:10px 16px;
-    border-radius:8px;
-    text-decoration:none;
-    font-weight:bold;
-  ">Login</a>
+  <button id="logoutBtn">Logout</button>
 </header>
-  <main class="container">
 
-    <div class="welcome">
-      <h2>Welcome to ConnectChat!</h2>
-      <p>Connect with people and chat with your friends.</p>
-    </div>
+<main class="container">
 
+  <div class="card">
+    <h2>Welcome to ConnectChat!</h2>
+    <div id="profileName">Loading account...</div>
+    <div id="profileEmail"></div>
+  </div>
+
+  <div class="card">
+    <h3>👥 Find People</h3>
     <input
-      class="search"
+      id="searchInput"
       type="search"
-      placeholder="Search people..."
+      placeholder="Search by username or email..."
     >
+    <div id="usersList" class="status">Loading users...</div>
+  </div>
 
-    <div class="section">
-      <h3>👥 Find People</h3>
-      <div class="empty">
-        Users will appear here.
-      </div>
-    </div>
+  <div class="card">
+    <h3>💬 Your Chats</h3>
+    <div class="status">Chats will be available soon.</div>
+  </div>
 
-    <div class="section">
-      <h3>💬 Your Chats</h3>
-      <div class="empty">
-        Your conversations will appear here.
-      </div>
-    </div>
+</main>
 
-  </main>
+<footer>ConnectChat — Connect with everyone</footer>
 
-  <footer>
-    ConnectChat — Connect with everyone
-  </footer>
+<script type="module">
+  import { auth, db } from "./firebase.js";
+
+  import {
+    onAuthStateChanged,
+    signOut
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+  import {
+    collection,
+    getDocs,
+    doc,
+    getDoc
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const profileName = document.getElementById("profileName");
+  const profileEmail = document.getElementById("profileEmail");
+  const usersList = document.getElementById("usersList");
+  const searchInput = document.getElementById("searchInput");
+  const logoutBtn = document.getElementById("logoutBtn");
+
+  let allUsers = [];
+  let currentUser = null;
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      window.location.href = "login.html";
+      return;
+    }
+
+    currentUser = user;
+    profileEmail.textContent = user.email || "";
+
+    try {
+      const profileRef = doc(db, "users", user.uid);
+      const profileSnap = await getDoc(profileRef);
+
+      if (profileSnap.exists()) {
+        const profile = profileSnap.data();
+        profileName.textContent = profile.username || user.email || "User";
+      } else {
+        profileName.textContent = user.email || "User";
+      }
+
+      await loadUsers();
+    } catch (error) {
+      console.error(error);
+      profileName.textContent = user.email || "User";
+      usersList.textContent = "Users load nahi ho paaye: " + error.message;
+    }
+  });
+
+  async function loadUsers() {
+    usersList.textContent = "Loading users...";
+
+    try {
+      const snapshot = await getDocs(collection(db, "users"));
+
+      allUsers = snapshot.docs
+        .map(item => item.data())
+        .filter(person => person.uid !== currentUser.uid);
+
+      renderUsers(searchInput.value);
+    } catch (error) {
+      console.error(error);
+      usersList.textContent = "Users load nahi ho paaye: " + error.message;
+    }
+  }
+
+  function renderUsers(query = "") {
+    const q = query.trim().toLowerCase();
+
+    const filtered = allUsers.filter(person =>
+      (person.usernameLower || person.username || "").toLowerCase().includes(q) ||
+      (person.email || "").toLowerCase().includes(q)
+    );
+
+    usersList.innerHTML = "";
+
+    if (filtered.length === 0) {
+      usersList.textContent = "No users found.";
+      return;
+    }
+
+    filtered.forEach(person => {
+      const row = document.createElement("div");
+      row.className = "user";
+
+      const name = document.createElement("div");
+      name.className = "userName";
+      name.textContent = person.username || "Unnamed User";
+
+      const email = document.createElement("div");
+      email.className = "userEmail";
+      email.textContent = person.email || "";
+
+      row.append(name, email);
+      usersList.appendChild(row);
+    });
+  }
+
+  searchInput.addEventListener("input", () => {
+    renderUsers(searchInput.value);
+  });
+
+  logoutBtn.onclick = async () => {
+    logoutBtn.disabled = true;
+
+    try {
+      await signOut(auth);
+      window.location.href = "login.html";
+    } catch (error) {
+      console.error(error);
+      alert("Logout error: " + error.message);
+      logoutBtn.disabled = false;
+    }
+  };
+</script>
 
 </body>
 </html>
