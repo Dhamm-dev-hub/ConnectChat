@@ -131,12 +131,15 @@ import {
   collection,getDocs,doc,getDoc,setDoc,addDoc,updateDoc,  
   serverTimestamp,query,orderBy,onSnapshot,where  
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";  
-    import {
+    
+import {
   getDatabase,
   ref,
   onValue,
   onDisconnect,
-  set
+  set,
+  get,
+  update
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
   
 const profileName=document.getElementById("profileName");  
