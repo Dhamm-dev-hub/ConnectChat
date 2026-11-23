@@ -168,7 +168,67 @@ const editAbout=document.getElementById("editAbout");
 const editPhotoURL=document.getElementById("editPhotoURL");  
 const saveProfileBtn=document.getElementById("saveProfileBtn");  
 const profileMessage=document.getElementById("profileMessage");  
-  
+
+// ===== CHAT SOUND & NOTIFICATIONS =====
+
+let chatSendSound;
+let chatReceiveSound;
+
+function initChatSounds() {
+  chatSendSound = new Audio(
+    "https://actions.google.com/sounds/v1/cartoon/pop.ogg"
+  );
+
+  chatReceiveSound = new Audio(
+    "https://actions.google.com/sounds/v1/cartoon/woodpecker.ogg"
+  );
+
+  chatSendSound.volume = 0.5;
+  chatReceiveSound.volume = 0.5;
+}
+
+function playSendSound() {
+  if (!chatSendSound) return;
+  chatSendSound.currentTime = 0;
+  chatSendSound.play().catch(() => {});
+}
+
+function playReceiveSound() {
+  if (!chatReceiveSound) return;
+  chatReceiveSound.currentTime = 0;
+  chatReceiveSound.play().catch(() => {});
+}
+
+async function enableChatNotifications() {
+  if (!("Notification" in window)) {
+    alert("Is browser mein notifications support nahi hain.");
+    return;
+  }
+
+  const permission = await Notification.requestPermission();
+
+  if (permission === "granted") {
+    alert("Notifications ON ho gaye 🔔");
+  } else {
+    alert("Notification permission allow nahi hui.");
+  }
+}
+
+function showMessageNotification(username, message) {
+  if (
+    "Notification" in window &&
+    Notification.permission === "granted" &&
+    document.hidden
+  ) {
+    new Notification("ConnectChat - " + username, {
+      body: message,
+      icon: "./icon-192.png"
+    });
+  }
+}
+
+initChatSounds();
+    
 let currentUser=null;  
 let currentProfile={};  
 let allUsers=[];  
@@ -605,24 +665,55 @@ async function openChat(person){
       collection(db,"chats",activeChatId,"messages"),  
       orderBy("createdAt","asc")  
     );  
-    unsubscribeMessages=onSnapshot(messagesQuery,snapshot=>{  
-      messagesDiv.innerHTML="";  
-      if(snapshot.empty){  
-        messagesDiv.innerHTML='<div class="status">Pehla message bhejo 👋</div>';  
-        return;  
-      }  
-      snapshot.forEach(messageDoc=>{  
-        const msg=messageDoc.data();  
-        const bubble=document.createElement("div");  
-        bubble.className="msg "+(msg.senderId===currentUser.uid?"mine":"theirs");  
-        bubble.textContent=msg.text||"";  
-        messagesDiv.appendChild(bubble);  
-      });  
-      messagesDiv.scrollTop=messagesDiv.scrollHeight;  
-    },error=>{  
-      console.error(error);  
-      chatError.textContent="Messages load error: "+error.message;  
-    });  
+
+        let firstMessagesLoad = true;
+
+    unsubscribeMessages=onSnapshot(messagesQuery,snapshot=>{
+      messagesDiv.innerHTML="";
+
+      if(snapshot.empty){
+        messagesDiv.innerHTML='<div class="status">Pehla message bhejo 👋</div>';
+        firstMessagesLoad=false;
+        return;
+      }
+
+      // Naye message par receive sound aur notification
+      if(!firstMessagesLoad){
+        snapshot.docChanges().forEach(change=>{
+          if(change.type==="added"){
+            const newMsg=change.doc.data();
+
+            if(newMsg.senderId!==currentUser.uid){
+              playReceiveSound();
+
+              showMessageNotification(
+                newMsg.senderUsername||"User",
+                newMsg.text||"Naya message"
+              );
+            }
+          }
+        });
+      }
+
+      firstMessagesLoad=false;
+
+      snapshot.forEach(messageDoc=>{
+        const msg=messageDoc.data();
+
+        const bubble=document.createElement("div");
+        bubble.className="msg "+(
+          msg.senderId===currentUser.uid?"mine":"theirs"
+        );
+
+        bubble.textContent=msg.text||"";
+        messagesDiv.appendChild(bubble);
+      });
+      messagesDiv.scrollTop=messagesDiv.scrollHeight;
+
+    },error=>{
+      console.error(error);
+      chatError.textContent="Messages load error: "+error.message;
+    });
   }catch(error){  
     console.error(error);  
     chatError.textContent="Chat open nahi hui: "+error.message;  
@@ -661,6 +752,7 @@ sendForm.onsubmit=async event=>{
       updatedAt:serverTimestamp()  
     });  
     messageInput.value="";  
+    playSendSound();
     messageInput.focus();  
     await loadRecentChats();  
   }catch(error){  
