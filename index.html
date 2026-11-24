@@ -768,17 +768,62 @@ async function openChat(person){
 
       firstMessagesLoad=false;
 
-      snapshot.forEach(messageDoc=>{
-        const msg=messageDoc.data();
+      
+snapshot.forEach(messageDoc=>{
+  const msg=messageDoc.data();
 
-        const bubble=document.createElement("div");
-        bubble.className="msg "+(
-          msg.senderId===currentUser.uid?"mine":"theirs"
+  const bubble=document.createElement("div");
+  bubble.className="msg "+(
+    msg.senderId===currentUser.uid?"mine":"theirs"
+  );
+
+  bubble.textContent=msg.text||"";
+
+  // Sirf apne message par 2 second long press
+  if(msg.senderId===currentUser.uid){
+
+    let pressTimer=null;
+    let longPressTriggered=false;
+
+    const startPress=()=>{
+      longPressTriggered=false;
+
+      pressTimer=setTimeout(()=>{
+        longPressTriggered=true;
+
+        const confirmDelete=confirm(
+          "Kya tum ye message permanently delete karna chahte ho?"
         );
 
-        bubble.textContent=msg.text||"";
-        messagesDiv.appendChild(bubble);
-      });
+        if(confirmDelete){
+          deleteDoc(
+            doc(db,"chats",activeChatId,"messages",messageDoc.id)
+          ).then(()=>{
+            console.log("Message permanently deleted");
+          }).catch(error=>{
+            console.error("Delete error:",error);
+            alert("Message delete nahi hua: "+error.message);
+          });
+        }
+      },2000);
+    };
+
+    const cancelPress=()=>{
+      clearTimeout(pressTimer);
+    };
+
+    bubble.addEventListener("touchstart",startPress);
+    bubble.addEventListener("touchend",cancelPress);
+    bubble.addEventListener("touchmove",cancelPress);
+
+    bubble.addEventListener("mousedown",startPress);
+    bubble.addEventListener("mouseup",cancelPress);
+    bubble.addEventListener("mouseleave",cancelPress);
+  }
+
+  messagesDiv.appendChild(bubble);
+});
+
       messagesDiv.scrollTop=messagesDiv.scrollHeight;
 
     },error=>{
