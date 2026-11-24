@@ -1,0 +1,2080 @@
+<!DOCTYPE html>  <html lang="hi">  
+<head>  
+<meta charset="UTF-8">  
+<meta name="viewport" content="width=device-width, initial-scale=1.0">  
+<title>ConnectChat</title>  
+<style> 
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --green: #008f72;
+  --green-dark: #006b58;
+  --blue: #2685d9;
+  --bg: #eaf0f3;
+  --white: #ffffff;
+  --text: #172b35;
+  --muted: #71808b;
+  --border: #e5ebef;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+header {
+  background: linear-gradient(120deg, #007d68, #075e54);
+  color: white;
+  padding: 15px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 3px 12px #0002;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+header h1 {
+  font-size: 22px;
+  letter-spacing: .3px;
+}
+
+button {
+  border: 0;
+  border-radius: 10px;
+  padding: 11px 15px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: .2s;
+}
+
+button:active {
+  transform: scale(.96);
+}
+
+#logoutBtn, #profileBtn {
+  background: #ffffff;
+  color: var(--green-dark);
+}
+
+.container {
+  max-width: 850px;
+  margin: auto;
+  padding: 20px 15px;
+}
+
+.card {
+  background: var(--white);
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 16px;
+  box-shadow: 0 3px 15px #1833440b;
+  border: 1px solid #edf1f3;
+}
+
+h2, h3 {
+  color: var(--green-dark);
+  margin-bottom: 12px;
+}
+
+#searchInput {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 25px;
+  font-size: 15px;
+  margin: 12px 0;
+  outline: none;
+  background: #f6f9fa;
+}
+
+#searchInput:focus,
+#messageInput:focus,
+.profileInput:focus {
+  border-color: var(--green);
+}
+
+.user, .chatItem {
+  padding: 15px 10px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background .2s;
+}
+
+.user:hover, .chatItem:hover {
+  background: #f0f8f6;
+}
+
+.userName {
+  font-weight: bold;
+  color: var(--green-dark);
+  font-size: 16px;
+}
+
+.status {
+  text-align: center;
+  padding: 18px;
+  color: var(--muted);
+}
+
+#chatView, #profileView {
+  display: none;
+}
+
+.chatHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 14px;
+}
+
+#backBtn, #profileBackBtn {
+  background: #e8f5f2;
+  color: var(--green-dark);
+}
+
+#chatUsername {
+  font-weight: bold;
+  color: var(--green-dark);
+  font-size: 18px;
+}
+
+#messages {
+  height: 55vh;
+  min-height: 300px;
+  overflow-y: auto;
+  padding: 15px;
+  background-color: #e7f0ec;
+  background-image: radial-gradient(#9bb9aa22 1px, transparent 1px);
+  background-size: 18px 18px;
+  border-radius: 13px;
+  margin: 14px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.msg {
+  max-width: 82%;
+  padding: 11px 14px;
+  border-radius: 14px;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+  box-shadow: 0 1px 2px #0001;
+}
+
+.mine {
+  align-self: flex-end;
+  background: #d2f8df;
+  border-bottom-right-radius: 4px;
+}
+
+.theirs {
+  align-self: flex-start;
+  background: white;
+  border-bottom-left-radius: 4px;
+}
+
+#sendForm {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+#messageInput {
+  flex: 1;
+  min-width: 0;
+  padding: 13px 16px;
+  border: 1px solid var(--border);
+  border-radius: 25px;
+  font-size: 15px;
+  outline: none;
+}
+
+#sendBtn {
+  background: var(--green);
+  color: white;
+  border-radius: 25px;
+  padding: 13px 18px;
+}
+
+#sendBtn:disabled {
+  opacity: .5;
+}
+
+#attachBtn {
+  background: #edf5f3;
+  color: var(--green-dark);
+  border-radius: 50%;
+  padding: 12px;
+}
+
+#chatError, #profileMessage {
+  color: #c00;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.chatItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.chatDetails {
+  min-width: 0;
+  flex: 1;
+}
+
+.chatPreview {
+  font-size: 14px;
+  color: var(--muted);
+  margin-top: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chatTime {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.profileTop {
+  text-align: center;
+  padding: 12px;
+}
+
+#profilePhoto {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #e8f5f2;
+  margin: 10px auto;
+  display: block;
+  border: 4px solid #e0f5ed;
+}
+
+#profileDisplayName {
+  font-size: 21px;
+  font-weight: bold;
+  color: var(--green-dark);
+  margin: 8px;
+}
+
+#profileAboutDisplay {
+  color: var(--muted);
+  margin: 8px;
+}
+
+.profileInput {
+  width: 100%;
+  padding: 13px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 15px;
+  margin: 8px 0;
+  outline: none;
+}
+
+.profileLabel {
+  display: block;
+  margin-top: 12px;
+  font-weight: bold;
+  color: var(--green-dark);
+}
+
+#saveProfileBtn {
+  background: var(--green);
+  color: white;
+  font-weight: bold;
+  width: 100%;
+  margin-top: 12px;
+}
+
+#enableNotificationsBtn {
+  background: var(--green);
+  color: white;
+  margin-top: 12px;
+}
+
+footer {
+  text-align: center;
+  color: var(--muted);
+  padding: 18px;
+  font-size: 13px;
+}
+
+@media (max-width: 600px) {
+  header {
+    padding: 13px 10px;
+  }
+
+  header h1 {
+    font-size: 19px;
+  }
+
+  header button {
+    padding: 9px 10px;
+    font-size: 12px;
+  }
+
+  .container {
+    padding: 12px 9px;
+  }
+
+  .card {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  #messages {
+    height: 58vh;
+  }
+
+  .msg {
+    max-width: 88%;
+  }
+}
+  
+.chatAvatar {
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #dcefe9;
+}
+
+.chatItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 5px;
+  border-bottom: 1px solid #edf0f2;
+}
+
+.chatDetails {
+  flex: 1;
+  min-width: 0;
+}
+
+.chatTime {
+  align-self: flex-start;
+  font-size: 11px;
+  color: #008f72;
+    }
+  
+.chatHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0 15px;
+}
+
+#chatHeaderPhoto {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #dcefe9;
+}
+
+.chatUserInfo {
+  flex: 1;
+}
+
+#chatUserStatus {
+  font-size: 12px;
+  color: #008f72;
+  margin-top: 4px;
+}
+
+#chatUsername {
+  font-size: 17px;
+  font-weight: bold;
+  color: #075e54;
+  }
+  
+   </style> 
+  
+</head>  
+<body>  <header>  
+  <h1>ConnectChat 💬</h1>  
+  <div style="display:flex;gap:8px">  
+    <button id="profileBtn">👤 Profile</button>  
+    <button id="logoutBtn">Logout</button>  
+  </div>  
+</header>  <main class="container"> 
+  
+<!-- HOME -->
+<div id="listView">
+
+  <div class="card">
+    <h2>ConnectChat 💬</h2>
+    <div id="profileName">Loading...</div>
+  </div>
+
+  <div class="card">
+    <h3>Chats</h3>
+    <input
+      id="searchInput"
+      type="search"
+      placeholder="🔍 Search people..."
+    >
+
+    <div id="recentChats" class="status">
+      Chats load ho rahi hain...
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🌐 Discover People</h3>
+    <div id="usersList" class="status">
+      Users load ho rahe hain...
+    </div>
+  </div>
+
+</div>
+  
+</div>  <!-- CHAT -->  <div id="chatView" class="card">  
+  
+<div class="chatHeader">
+
+  <button id="backBtn">←</button>
+
+  <img
+    id="chatHeaderPhoto"
+    src=""
+    alt="Profile"
+  >
+
+  <div class="chatUserInfo">
+    <div id="chatUsername">Username</div>
+    <div id="chatUserStatus">ConnectChat</div>
+  </div>
+<div style="display:flex;gap:6px;margin-left:auto;">
+  <button type="button" id="audioCallBtn">📞</button>
+  <button type="button" id="videoCallBtn">📹</button>
+</div>
+</div>
+  
+  <div id="messages">  
+    <div class="status">Messages load ho rahe hain...</div>  
+  </div>  
+  <div id="replyPreview" style="display:none; padding:10px; margin-bottom:8px; background:#e8f0fe; border-left:4px solid #2196F3; border-radius:8px;">
+  <div style="font-size:12px; color:#2196F3; font-weight:bold;">Replying to</div>
+  <div id="replyPreviewText" style="font-size:14px; overflow-wrap:anywhere;"></div>
+  <button type="button" id="cancelReplyBtn" style="float:right;">✕</button>
+  </div>
+  <form id="sendForm">  
+    <input id="messageInput" type="text" placeholder="Message likho..." autocomplete="off" maxlength="2000" required>  
+    <button type="button" id="attachBtn">📎</button>
+    <input type="file" id="fileInput" accept="*/*" hidden>
+    <button id="sendBtn" type="submit">Send</button>  
+  </form>  
+  <div id="filePreview" style="font-size:13px;margin-top:8px;overflow-wrap:anywhere"></div>
+  <audio id="remoteAudio" autoplay></audio>
+  <button
+  type="button"
+  id="endCallBtn"
+  style="display:none;background:#e53935;color:white;border:none;padding:10px 18px;border-radius:8px;margin:10px;"
+>
+  📴 End Call
+  </button>
+
+<video
+  id="remoteVideo"
+  autoplay
+  playsinline
+  style="display:none;width:100%;max-height:250px;border-radius:12px;"
+></video>
+  <div id="chatError"></div>  
+</div>  <!-- PROFILE -->  <div id="profileView" class="card">  
+  <div class="chatHeader">  
+    <button id="profileBackBtn">← Back</button>  
+    <h3>My Profile</h3>  
+  </div>    <div class="profileTop">  
+    <img id="profilePhoto" src="" alt="Profile photo">  
+    <div id="profileDisplayName">Username</div>  
+    <div id="profileAboutDisplay">About</div>  
+  </div>    <form id="profileForm">  
+    <label class="profileLabel" for="editUsername">Username</label>  
+    <input id="editUsername" class="profileInput" maxlength="20" required>  <label class="profileLabel" for="editAbout">About</label>  
+<input id="editAbout" class="profileInput" maxlength="100" placeholder="Apne baare mein likho">  
+
+<label class="profileLabel" for="editPhotoURL">Profile photo URL (optional)</label>  
+<input id="editPhotoURL" class="profileInput" type="url" placeholder="https://...">  
+
+<button id="saveProfileBtn" type="submit">Save Profile</button>
+
+  </form>  
+  <div id="profileMessage"></div>  
+</div>  </main>  
+<footer>ConnectChat — Connect with everyone</footer> 
+  <script type="module">  
+import {auth,db} from "./firebase.js";  
+import {onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";  
+import {
+  collection,getDocs,doc,getDoc,setDoc,addDoc,updateDoc,deleteDoc,
+  serverTimestamp,query,orderBy,onSnapshot,where
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import {
+  getDatabase,
+  ref,
+  onValue,
+  onDisconnect,
+  set
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import {
+  getMessaging,
+  getToken,
+  onMessage
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+
+import { getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  
+const profileName=document.getElementById("profileName");  
+const usersList=document.getElementById("usersList");  
+const recentChats=document.getElementById("recentChats");  
+
+    // ONLINE / OFFLINE STATUS
+
+const realtimeDB = getDatabase();
+let statusListener = null;
+
+function setOnlineStatus(uid) {
+  const statusRef = ref(realtimeDB, "status/" + uid);
+  const connectedRef = ref(realtimeDB, ".info/connected");
+  if (statusListener) statusListener();
+  statusListener = onValue(connectedRef, async (snapshot) => {
+    if (snapshot.val() !== true) return;
+    try {
+      await onDisconnect(statusRef).set({ state: "offline", lastChanged: Date.now() });
+      await set(statusRef, { state: "online", lastChanged: Date.now() });
+    } catch (error) {
+      console.error("Status error:", error);
+    }
+  });
+}
+    
+const searchInput=document.getElementById("searchInput");  
+const logoutBtn=document.getElementById("logoutBtn");  
+const profileBtn=document.getElementById("profileBtn");  
+const listView=document.getElementById("listView");  
+const chatView=document.getElementById("chatView");  
+const profileView=document.getElementById("profileView");  
+const backBtn=document.getElementById("backBtn");  
+const audioCallBtn = document.getElementById("audioCallBtn");
+const videoCallBtn = document.getElementById("videoCallBtn");
+const profileBackBtn=document.getElementById("profileBackBtn"); 
+    // ---------- AUDIO / VIDEO CALL BUTTONS ----------
+
+if(audioCallBtn){
+  audioCallBtn.addEventListener("click",()=>{
+    startCall("audio");
+  });
+}
+
+if(videoCallBtn){
+  videoCallBtn.addEventListener("click",()=>{
+    startCall("video");
+  });
+ }
+const chatUsername=document.getElementById("chatUsername");  
+const messagesDiv=document.getElementById("messages");  
+const sendForm=document.getElementById("sendForm");  
+const messageInput=document.getElementById("messageInput");
+const replyPreview=document.getElementById("replyPreview");
+const replyPreviewText=document.getElementById("replyPreviewText");
+const cancelReplyBtn=document.getElementById("cancelReplyBtn");
+const sendBtn=document.getElementById("sendBtn");  
+const chatError=document.getElementById("chatError");
+const attachBtn=document.getElementById("attachBtn");
+const fileInput=document.getElementById("fileInput");
+const filePreview=document.getElementById("filePreview");
+
+const profilePhoto=document.getElementById("profilePhoto");  
+const profileDisplayName=document.getElementById("profileDisplayName");  
+const profileAboutDisplay=document.getElementById("profileAboutDisplay");  
+const profileForm=document.getElementById("profileForm");  
+const editUsername=document.getElementById("editUsername");  
+const editAbout=document.getElementById("editAbout");  
+const editPhotoURL=document.getElementById("editPhotoURL");  
+const saveProfileBtn=document.getElementById("saveProfileBtn");  
+const profileMessage=document.getElementById("profileMessage");  
+
+// ===== CHAT SOUND & NOTIFICATIONS =====
+
+let chatSendSound;
+let chatReceiveSound;
+
+function initChatSounds() {
+  chatSendSound = new Audio(
+    "https://actions.google.com/sounds/v1/cartoon/pop.ogg"
+  );
+
+  chatReceiveSound = new Audio(
+    "https://actions.google.com/sounds/v1/cartoon/woodpecker.ogg"
+  );
+
+  chatSendSound.volume = 0.5;
+  chatReceiveSound.volume = 0.5;
+}
+
+function playSendSound() {
+  if (!chatSendSound) return;
+  chatSendSound.currentTime = 0;
+  chatSendSound.play().catch(() => {});
+}
+
+function playReceiveSound() {
+  if (!chatReceiveSound) return;
+  chatReceiveSound.currentTime = 0;
+  chatReceiveSound.play().catch(() => {});
+}
+
+async function enableChatNotifications() {
+  try {
+    if (!("Notification" in window)) {
+      alert("Is browser mein notifications support nahi hain.");
+      return;
+    }
+
+    const permission = await Notification.requestPermission();
+
+    if (permission !== "granted") {
+      alert("Notification permission allow nahi hui.");
+      return;
+    }
+
+    const swRegistration = await navigator.serviceWorker.register(
+  "./firebase-messaging-sw.js"
+);
+
+await navigator.serviceWorker.ready;
+    const token = await getToken(messaging, {
+      vapidKey: "BFBurjf8J-7C4x9hR4GBAsPxQkAfHSR0u45V-a9xWpJ9L2SNB3LUjcQ_xX27E64qVSGa06_Jkb3WFAXjmnWQgho",
+      serviceWorkerRegistration: swRegistration
+    });
+
+   if (token) {
+  console.log("FCM Token:", token);
+
+  await setDoc(
+    doc(db, "users", currentUser.uid),
+    {
+      fcmToken: token
+    },
+    { merge: true }
+  );
+
+  alert("Notifications ON ho gaye 🔔");
+} else {
+  alert("FCM token nahi mila.");
+}
+  } catch (error) {
+    console.error("Notification error:", error);
+    alert("Notification error: " + error.message);
+  }
+}
+
+
+const enableNotificationsBtn =
+  document.getElementById("enableNotificationsBtn");
+
+if (enableNotificationsBtn) {
+  enableNotificationsBtn.addEventListener("click", () => {
+    enableChatNotifications();
+  });
+} else {
+  console.error("Notification button nahi mila!");
+}
+
+
+function showMessageNotification(username, message) {
+  if (
+    "Notification" in window &&
+    Notification.permission === "granted" &&
+    document.hidden
+  ) {
+    new Notification("ConnectChat - " + username, {
+      body: message,
+      icon: "./icon-192.png"
+    });
+  }
+}
+
+initChatSounds();
+    
+let currentUser=null;  
+let currentProfile={};  
+let allUsers=[];  
+let activeChatId=null;  
+let unsubscribeMessages=null;
+let seenObserver = null;
+let replyToMessage = null;
+let typingListener = null;
+let typingTimer = null;
+    const messaging = getMessaging(getApp());
+    // ===== FOREGROUND FCM NOTIFICATION =====
+
+onMessage(messaging, (payload) => {
+  console.log("FCM message received:", payload);
+
+  const title = payload.notification?.title || "ConnectChat";
+  const body = payload.notification?.body || "Naya message aaya hai 💬";
+
+  if (Notification.permission === "granted") {
+    new Notification(title, {
+      body: body,
+      icon: "./icon-192.png"
+    });
+  }
+});
+
+// WebRTC direct file transfer (5 MB limit; both users should keep chat open)
+let peerConnection=null;
+let dataChannel=null;
+let currentSignalId=null;
+let activePeerUid=null;
+let isCaller=false;
+let unsubscribeSignal=null;
+let unsubscribeIncomingSignals=null;
+let unsubscribeRemoteCandidates=null;
+let remoteDescriptionReady=false;
+let pendingRemoteCandidates=[];
+let receivedFileMeta=null;
+let receivedFileChunks=[];
+let receivedFileBytes=0;
+let callPeerConnection = null;
+let currentCallId = null;
+let isCallCaller = false;
+let callLocalStream = null;
+let callRemoteStream = null;
+let unsubscribeCallDoc = null;
+let unsubscribeCallCandidates = null;
+let unsubscribeIncomingCalls = null;
+const MAX_FILE_SIZE=5*1024*1024;
+const FILE_CHUNK_SIZE=16*1024;
+const rtcConfig={iceServers:[{urls:"stun:stun.l.google.com:19302"}]};
+
+onAuthStateChanged(auth,async user=>{  
+  if(!user){  
+    location.href="login.html";  
+    return;  
+  }  
+
+setOnlineStatus(user.uid);
+  currentUser=user;  
+  try{  
+    const profileSnap=await getDoc(doc(db,"users",user.uid));  
+    currentProfile=profileSnap.exists()?profileSnap.data():{};  
+    updateProfileDisplay();  
+    await loadUsers();  
+    await loadRecentChats();  
+  }catch(error){  
+    console.error(error);  
+    profileName.textContent=currentProfile.username||"User";  
+    usersList.textContent="Users load nahi hue: "+error.message;  
+    recentChats.textContent="Chats load nahi hui: "+error.message;  
+  }  
+});  
+  
+function updateProfileDisplay(){  
+  const username=currentProfile.username||"User";  
+  profileName.textContent=username;  
+  profileDisplayName.textContent=username;  
+  profileAboutDisplay.textContent=currentProfile.about||"Hey! I am using ConnectChat.";  
+  editUsername.value=username;  
+  editAbout.value=currentProfile.about||"";  
+  editPhotoURL.value=currentProfile.photoURL||"";  
+  profilePhoto.src=currentProfile.photoURL||"";  
+  profilePhoto.style.display=currentProfile.photoURL?"block":"none";  
+}  
+  
+profileBtn.onclick=()=>{  
+  listView.style.display="none";  
+  chatView.style.display="none";  
+  profileView.style.display="block";  
+  profileMessage.textContent="";  
+};  
+  
+profileBackBtn.onclick=()=>{  
+  profileView.style.display="none";  
+  listView.style.display="block";  
+};  
+  
+profileForm.onsubmit=async event=>{  
+  event.preventDefault();  
+  const username=editUsername.value.trim();  
+  const about=editAbout.value.trim();  
+  const photoURL=editPhotoURL.value.trim();  
+  
+  if(!/^[a-zA-Z0-9_]{3,20}$/.test(username)){  
+    profileMessage.textContent="Username 3-20 characters ka ho, letters/numbers/underscore.";  
+    return;  
+  }  
+  
+  saveProfileBtn.disabled=true;  
+  profileMessage.style.color="#075e54";  
+  profileMessage.textContent="Profile save ho rahi hai...";  
+  
+  try{  
+    await updateDoc(doc(db,"users",currentUser.uid),{  
+      username,  
+      usernameLower:username.toLowerCase(),  
+      about,  
+      photoURL  
+    });  
+    currentProfile={...currentProfile,username,usernameLower:username.toLowerCase(),about,photoURL};  
+    updateProfileDisplay();  
+    await loadUsers();  
+    profileMessage.textContent="Profile save ho gayi!";  
+  }catch(error){  
+    console.error(error);  
+    profileMessage.style.color="red";  
+    profileMessage.textContent="Save nahi hua: "+error.message;  
+  }finally{  
+    saveProfileBtn.disabled=false;  
+  }  
+};  
+  
+async function loadUsers(){  
+  usersList.textContent="Users load ho rahe hain...";  
+  try{  
+    const snapshot=await getDocs(collection(db,"users"));  
+    allUsers=snapshot.docs
+  .map(d=>({
+    ...d.data(),
+    uid: d.id
+  }))
+  .filter(person=>person.uid!==currentUser.uid);
+    renderUsers(searchInput.value);  
+  }catch(error){  
+    console.error(error);  
+    usersList.textContent="Users load nahi hue: "+error.message;  
+  }  
+}  
+  
+const userStatusUnsubscribers = new Map();
+const userStatuses = {};
+
+function renderUsers(search="") {
+  const term = search.trim().toLowerCase();
+
+  // Har user ka status listener ek hi baar lagao
+  allUsers.forEach(person => {
+    const uid = person.uid || person.id;
+
+    if (!uid || userStatusUnsubscribers.has(uid)) return;
+
+    const statusRef = ref(realtimeDB, "status/" + uid);
+
+    const unsubscribe = onValue(statusRef, snapshot => {
+      const data = snapshot.val();
+      const newState = data?.state === "online" ? "online" : "offline";
+      if (userStatuses[uid] === newState) return;
+      userStatuses[uid] = newState;
+      renderUsers(search);
+    });
+
+    userStatusUnsubscribers.set(uid, unsubscribe);
+  });
+
+  const filtered = allUsers.filter(person =>
+    (person.username || "").toLowerCase().includes(term)
+  );
+
+  usersList.innerHTML = "";
+
+  if (!filtered.length) {
+    usersList.textContent = "Koi user nahi mila.";
+    return;
+  }
+
+  filtered.forEach(person => {
+    const uid = person.uid || person.id;
+    const row = document.createElement("div");
+    row.className = "user";
+
+    const name = document.createElement("div");
+    name.className = "userName";
+    name.textContent = person.username || "User";
+
+    const status = document.createElement("small");
+    const isOnline = userStatuses[uid] === "online";
+
+    status.textContent = isOnline ? "● Online" : "● Offline";
+    status.style.color = isOnline ? "#16a34a" : "#888";
+    status.style.display = "block";
+    status.style.marginTop = "4px";
+
+    row.appendChild(name);
+    row.appendChild(status);
+
+    row.onclick = () => openChat(person);
+    usersList.appendChild(row);
+  });
+    }
+    
+searchInput.addEventListener("input",()=>renderUsers(searchInput.value));  
+  
+async function loadRecentChats(){  
+  recentChats.textContent="Chats load ho rahi hain...";  
+  try{  
+    const chatsQuery=query(  
+      collection(db,"chats"),  
+      where("members","array-contains",currentUser.uid)  
+    );  
+    const snapshot=await getDocs(chatsQuery);
+
+    const chatData=snapshot.docs.map(d=>({
+      id:d.id,
+      ...d.data()
+    }));
+
+    chatData.sort((a,b)=>{
+      const ta=a.updatedAt?.toMillis?.()||0;
+      const tb=b.updatedAt?.toMillis?.()||0;
+      return tb-ta;
+    });
+
+    recentChats.innerHTML="";
+
+    if(chatData.length===0){
+      recentChats.textContent="Abhi koi chat nahi. Find People se chat shuru karo.";
+      return;
+    }
+
+    for(const chat of chatData){
+
+      const otherUid=(chat.members||[]).find(
+        uid=>uid!==currentUser.uid
+      );
+
+      if(!otherUid)continue;
+
+      let otherProfile={};
+
+      try{
+        const userSnap=await getDoc(
+          doc(db,"users",otherUid)
+        );
+
+        if(userSnap.exists()){
+          otherProfile=userSnap.data();
+        }
+      }catch(e){
+        console.warn(e);
+      }
+
+      const row=document.createElement("div");
+      row.className="chatItem";
+
+      const photo=document.createElement("img");
+      photo.className="chatAvatar";
+      photo.src=otherProfile.photoURL||"";
+      photo.alt="Profile";
+      photo.onerror=()=>{
+        photo.style.display="none";
+      };
+
+      const details=document.createElement("div");
+      details.className="chatDetails";
+
+      const name=document.createElement("div");
+      name.className="userName";
+      name.textContent=otherProfile.username||"User";
+
+      const preview=document.createElement("div");
+      preview.className="chatPreview";
+      preview.textContent=chat.lastMessage||"Chat shuru karo";
+
+      details.append(name,preview);
+
+      const time=document.createElement("div");
+      time.className="chatTime";
+      time.textContent=formatTime(chat.updatedAt);
+
+      row.append(photo,details,time);
+
+      row.onclick=()=>{
+        openChat(
+          otherProfile.uid
+            ? otherProfile
+            : {uid:otherUid,username:"User"}
+        );
+      };
+
+      recentChats.appendChild(row);
+    }
+
+    if(!recentChats.children.length){
+      recentChats.textContent="Abhi koi chat nahi.";
+    }
+
+  }catch(error){
+    console.error(error);
+    recentChats.textContent="Chats load nahi hui: "+error.message;
+  }
+}
+
+function formatTime(timestamp){
+  if(!timestamp?.toDate)return "";
+
+  const date=timestamp.toDate();
+
+  if(date.toDateString()===new Date().toDateString()){
+    return date.toLocaleTimeString("hi-IN",{
+      hour:"2-digit",
+      minute:"2-digit"
+    });
+  }
+
+  return date.toLocaleDateString("hi-IN",{
+    day:"numeric",
+    month:"short"
+  });
+    }
+    
+  
+// ---------- WEBRTC SIGNALING + FILE TRANSFER ----------
+async function saveIceCandidate(candidate, collectionName) {
+  if (!activeChatId || !currentSignalId) return;
+  try {
+    await addDoc(collection(db,"chats",activeChatId,"signals",currentSignalId,collectionName),candidate.toJSON());
+  } catch (error) { console.error("ICE save error:",error); }
+}
+
+function stopWebRTC(){
+  if(unsubscribeSignal){unsubscribeSignal();unsubscribeSignal=null;}
+  if(unsubscribeIncomingSignals){unsubscribeIncomingSignals();unsubscribeIncomingSignals=null;}
+  if(unsubscribeRemoteCandidates){unsubscribeRemoteCandidates();unsubscribeRemoteCandidates=null;}
+  if(dataChannel){try{dataChannel.close();}catch(e){} dataChannel=null;}
+  if(peerConnection){try{peerConnection.close();}catch(e){} peerConnection=null;}
+  currentSignalId=null; activePeerUid=null; isCaller=false;
+  remoteDescriptionReady=false; pendingRemoteCandidates=[];
+  receivedFileMeta=null; receivedFileChunks=[]; receivedFileBytes=0;
+}
+// ---------- AUDIO / VIDEO CALLING ----------
+let localStream = null;
+let remoteStream = null;
+let currentCallType = null;
+let isCallActive = false;
+let callListener = null;
+let incomingCallId = null;
+function createPeerConnection(){
+  peerConnection=new RTCPeerConnection(rtcConfig);
+  peerConnection.ondatachannel=(event)=>{dataChannel=event.channel;setupDataChannel();};
+    peerConnection.ontrack=(event)=>{
+    if(!remoteStream){
+      remoteStream=new MediaStream();
+    }
+
+    event.streams[0].getTracks().forEach(track=>{
+      remoteStream.addTrack(track);
+    });
+
+    const remoteAudio=document.getElementById("remoteAudio");
+    const remoteVideo=document.getElementById("remoteVideo");
+
+    if(remoteAudio){
+      remoteAudio.srcObject=remoteStream;
+    }
+
+    if(remoteVideo){
+      remoteVideo.srcObject=remoteStream;
+    }
+  };
+
+  peerConnection.onicecandidate=async(event)=>{
+    if(event.candidate){await saveIceCandidate(event.candidate,isCaller?"callerCandidates":"calleeCandidates");}
+  };
+  peerConnection.onconnectionstatechange=()=>{
+    console.log("WebRTC state:",peerConnection?.connectionState);
+    if(peerConnection?.connectionState==="failed") chatError.textContent="File connection fail hua. Network/STUN issue ho sakta hai.";
+  };
+  return peerConnection;
+}
+async function getCallMedia(type){
+  try{
+    callLocalStream=await navigator.mediaDevices.getUserMedia({
+      audio:true,
+      video:type==="video"
+    });
+
+    return callLocalStream;
+
+  }catch(error){
+    console.error("Media access error:",error);
+    alert("Microphone ya Camera permission nahi mili.");
+    throw error;
+  }
+}
+
+function addCallTracks(){
+  if(!callLocalStream || !callPeerConnection)return;
+
+  callLocalStream.getTracks().forEach(track=>{
+    callPeerConnection.addTrack(track,callLocalStream);
+  });
+    }
+    function createCallPeerConnection(){
+
+  callPeerConnection = new RTCPeerConnection(rtcConfig);
+
+  callRemoteStream = new MediaStream();
+
+  callPeerConnection.ontrack = (event) => {
+
+    callRemoteStream.addTrack(event.track);
+
+    const remoteAudio = document.getElementById("remoteAudio");
+    const remoteVideo = document.getElementById("remoteVideo");
+
+    if(remoteAudio){
+      remoteAudio.srcObject = callRemoteStream;
+    }
+
+    if(remoteVideo){
+      remoteVideo.srcObject = callRemoteStream;
+      remoteVideo.style.display =
+        currentCallType === "video" ? "block" : "none";
+    }
+  };
+
+  callPeerConnection.onicecandidate = async (event) => {
+
+    if(event.candidate && currentCallId && activeChatId){
+
+      const collectionName = isCallCaller
+        ? "callerCandidates"
+        : "calleeCandidates";
+
+      await addDoc(
+        collection(db,"chats",activeChatId,"calls",currentCallId,collectionName),
+        event.candidate.toJSON()
+      );
+    }
+  };
+
+  callPeerConnection.onconnectionstatechange = () => {
+    console.log("Call connection:",callPeerConnection?.connectionState);
+  };
+
+  return callPeerConnection;
+    }
+    function listenForCallCandidates(){
+
+  if(unsubscribeCallCandidates){
+    unsubscribeCallCandidates();
+  }
+
+  const collectionName = isCallCaller
+    ? "calleeCandidates"
+    : "callerCandidates";
+
+  const candidatesRef = collection(
+    db,
+    "chats",
+    activeChatId,
+    "calls",
+    currentCallId,
+    collectionName
+  );
+
+  unsubscribeCallCandidates = onSnapshot(
+    candidatesRef,
+    async snapshot => {
+
+      for(const change of snapshot.docChanges()){
+
+        if(change.type !== "added") continue;
+
+        try{
+          await callPeerConnection.addIceCandidate(
+            new RTCIceCandidate(change.doc.data())
+          );
+        }catch(error){
+          console.error("Call ICE error:",error);
+        }
+      }
+    }
+  );
+    }
+    async function startCall(type){
+
+  if(!activeChatId || !activePeerUid){
+    alert("Pehle chat open karo.");
+    return;
+  }
+
+  try{
+    currentCallType = type;
+    document.getElementById("endCallBtn").style.display = "inline-block";
+    isCallCaller = true;
+
+    await getCallMedia(type);
+
+    createCallPeerConnection();
+    addCallTracks();
+
+    const callRef = await addDoc(
+      collection(db,"chats",activeChatId,"calls"),
+      {
+        callerUid: currentUser.uid,
+        calleeUid: activePeerUid,
+        type: type,
+        status: "creating",
+        createdAt: serverTimestamp()
+      }
+    );
+
+    currentCallId = callRef.id;
+
+    const offer = await callPeerConnection.createOffer();
+
+    await callPeerConnection.setLocalDescription(offer);
+
+    await updateDoc(callRef,{
+  offer: { type: offer.type, sdp: offer.sdp },
+  status: "ringing"
+});
+
+   unsubscribeCallDoc = onSnapshot(callRef,async snapshot=>{
+
+  const data = snapshot.data();
+
+  if(!data || !callPeerConnection) return;
+
+  // सामने वाले ने call reject या end कर दी
+  if(data.status === "rejected" || data.status === "ended"){
+    alert(data.status === "rejected"
+      ? "Call reject kar di gayi."
+      : "Call end ho gayi.");
+
+    endCall(true);
+    return;
+  }
+
+  // सामने वाले का answer मिल गया
+  if(data.answer && !callPeerConnection.currentRemoteDescription){
+
+    await callPeerConnection.setRemoteDescription(
+      new RTCSessionDescription(data.answer)
+    );
+
+    listenForCallCandidates();
+  }
+
+});
+
+    }catch(error){
+    console.error("Start call error:",error);
+
+    if(callLocalStream){
+      callLocalStream.getTracks().forEach(track=>track.stop());
+      callLocalStream = null;
+    }
+
+    if(callPeerConnection){
+      callPeerConnection.close();
+      callPeerConnection = null;
+    }
+
+    currentCallId = null;
+    currentCallType = null;
+
+    document.getElementById("endCallBtn").style.display = "none";
+
+    alert("Call start nahi ho payi.");
+    }
+  }
+    function listenForIncomingCalls(){
+
+  if(unsubscribeIncomingCalls){
+    unsubscribeIncomingCalls();
+  }
+
+  if(!activeChatId || !activePeerUid)return;
+
+  const callsRef = collection(db,"chats",activeChatId,"calls");
+
+  const q = query(
+    callsRef,
+    where("callerUid","==",activePeerUid),
+    where("calleeUid","==",currentUser.uid),
+    where("status","==","ringing")
+  );
+
+  unsubscribeIncomingCalls = onSnapshot(q,snapshot=>{
+
+    snapshot.docChanges().forEach(async change=>{
+
+      if(change.type !== "added")return;
+
+      const callDoc = change.doc;
+      const callData = callDoc.data();
+
+      const accept = confirm(
+        "Incoming "+callData.type+" call. Accept karna hai?"
+      );
+
+      if(accept){
+        await acceptIncomingCall(callDoc);
+      }else{
+        await updateDoc(callDoc.ref,{
+          status:"rejected"
+        });
+      }
+
+    });
+  });
+}
+
+async function acceptIncomingCall(callDoc){
+
+  try{
+    const callData = callDoc.data();
+
+    currentCallId = callDoc.id;
+    currentCallType = callData.type;
+    document.getElementById("endCallBtn").style.display = "inline-block";
+    isCallCaller = false;
+
+    await getCallMedia(currentCallType);
+
+    createCallPeerConnection();
+    addCallTracks();
+
+    await callPeerConnection.setRemoteDescription(
+      new RTCSessionDescription(callData.offer)
+    );
+
+    listenForCallCandidates();
+
+    const answer = await callPeerConnection.createAnswer();
+
+    await callPeerConnection.setLocalDescription(answer);
+
+    await updateDoc(callDoc.ref,{
+  answer:{
+    type:answer.type,
+    sdp:answer.sdp
+  },
+  status:"answered"
+});
+
+unsubscribeCallDoc = onSnapshot(callDoc.ref, snapshot => {
+
+  const data = snapshot.data();
+
+  if(data && data.status === "ended"){
+    endCall(true);
+    alert("Call doosre user ne end kar di.");
+  }
+
+});
+  }catch(error){
+    console.error("Accept call error:",error);
+    alert("Call accept nahi ho payi.");
+  }
+    }
+      
+async function endCall(silent=false){
+
+  const endCallBtn = document.getElementById("endCallBtn");
+  if(endCallBtn){
+    endCallBtn.style.display = "none";
+  }
+
+  try{
+
+    if(currentCallId && activeChatId){
+      await updateDoc(
+        doc(db,"chats",activeChatId,"calls",currentCallId),
+        {status:"ended"}
+      );
+    }
+
+  }catch(error){
+    console.error("End call error:",error);
+  }
+
+  if(unsubscribeCallDoc){
+    unsubscribeCallDoc();
+    unsubscribeCallDoc = null;
+  }
+
+  if(unsubscribeCallCandidates){
+    unsubscribeCallCandidates();
+    unsubscribeCallCandidates = null;
+  }
+
+  if(callPeerConnection){
+    callPeerConnection.close();
+    callPeerConnection = null;
+  }
+
+  if(callLocalStream){
+    callLocalStream.getTracks().forEach(track=>track.stop());
+    callLocalStream = null;
+  }
+
+  callRemoteStream = null;
+  currentCallId = null;
+  currentCallType = null;
+  const remoteAudio = document.getElementById("remoteAudio");
+  const remoteVideo = document.getElementById("remoteVideo");
+
+  if(remoteAudio){
+    remoteAudio.srcObject = null;
+  }
+
+  if(remoteVideo){
+    remoteVideo.srcObject = null;
+    remoteVideo.style.display = "none";
+  }
+
+if(!silent){
+  alert("Call ended.");
+    }
+    }
+
+const endCallBtnElement = document.getElementById("endCallBtn");
+if(endCallBtnElement){
+  endCallBtnElement.addEventListener("click", () => endCall());
+}
+
+function setupDataChannel(){
+  if(!dataChannel)return;
+  dataChannel.binaryType="arraybuffer";
+  dataChannel.onopen=()=>{filePreview.textContent="File connection ready. File bhej sakte hain.";};
+  dataChannel.onclose=()=>{console.log("File data channel closed");};
+  dataChannel.onerror=(e)=>console.error("Data channel error:",e);
+  dataChannel.onmessage=(event)=>{
+    if(typeof event.data==="string"){
+      let packet;try{packet=JSON.parse(event.data);}catch(e){return;}
+      if(packet.type==="file-meta"){
+        receivedFileMeta=packet;
+        receivedFileChunks=[];receivedFileBytes=0;
+        filePreview.textContent="File receive ho rahi hai: "+packet.name;
+      }else if(packet.type==="file-end"){
+        if(!receivedFileMeta)return;
+        const blob=new Blob(receivedFileChunks,{type:receivedFileMeta.mime||"application/octet-stream"});
+        const url=URL.createObjectURL(blob);
+        const link=document.createElement("a");link.href=url;link.download=receivedFileMeta.name||"received-file";link.textContent="Download received file: "+link.download;
+        link.style.display="block";link.style.marginTop="8px";
+        filePreview.appendChild(link);
+        filePreview.insertAdjacentText("beforeend"," ("+Math.round(blob.size/1024)+" KB)");
+        receivedFileChunks=[];receivedFileMeta=null;receivedFileBytes=0;
+      }
+    }else{
+      if(receivedFileMeta){receivedFileChunks.push(event.data);receivedFileBytes+=event.data.byteLength;}
+    }
+  };
+}
+
+async function addRemoteCandidate(candidate){
+  if(!peerConnection)return;
+  if(!remoteDescriptionReady){pendingRemoteCandidates.push(candidate);return;}
+  try{await peerConnection.addIceCandidate(candidate);}catch(e){console.warn("Remote ICE candidate:",e);}
+}
+
+function listenRemoteCandidates(){
+  if(unsubscribeRemoteCandidates)unsubscribeRemoteCandidates();
+  const remoteBucket=isCaller?"calleeCandidates":"callerCandidates";
+  const q=collection(db,"chats",activeChatId,"signals",currentSignalId,remoteBucket);
+  unsubscribeRemoteCandidates=onSnapshot(q,snap=>{
+    snap.docChanges().forEach(change=>{
+      if(change.type==="added")addRemoteCandidate(new RTCIceCandidate(change.doc.data()));
+    });
+  },err=>console.error("Remote ICE listener error:",err));
+}
+
+async function flushRemoteCandidates(){
+  remoteDescriptionReady=true;
+  const queued=pendingRemoteCandidates.splice(0);
+  for(const candidate of queued){try{await peerConnection.addIceCandidate(candidate);}catch(e){console.warn(e);}}
+}
+
+async function startFileTransfer(file){
+  if(!file)return;
+  if(!activeChatId||!activePeerUid){alert("Pehle chat khol lo.");return;}
+  if(file.size>MAX_FILE_SIZE){alert("Abhi file 5 MB se chhoti honi chahiye.");fileInput.value="";return;}
+  const peerUid=activePeerUid;
+  stopWebRTC();
+  activePeerUid=peerUid;
+  isCaller=true;
+  const signalsRef=collection(db,"chats",activeChatId,"signals");
+  const signalDoc=await addDoc(signalsRef,{callerUid:currentUser.uid,calleeUid:activePeerUid,status:"creating",createdAt:serverTimestamp()});
+  currentSignalId=signalDoc.id;
+  createPeerConnection();
+  dataChannel=peerConnection.createDataChannel("file-transfer");setupDataChannel();
+  listenRemoteCandidates();
+  const offer=await peerConnection.createOffer();await peerConnection.setLocalDescription(offer);
+await updateDoc(signalDoc,{
+  offer:{type:offer.type,sdp:offer.sdp},
+  status:"offering"
+});
+  unsubscribeSignal=onSnapshot(signalDoc,async snap=>{
+    const data=snap.data();
+    if(data?.answer&&!peerConnection.currentRemoteDescription){
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+      await flushRemoteCandidates();
+    }
+  },err=>console.error("Signal listener:",err));
+  filePreview.textContent="File connection ke liye doosre user ka chat open hona zaroori hai...";
+  filePreview.dataset.pendingFile="";
+  // Once the channel opens, send the selected file.
+  dataChannel.onopen=async()=>{
+    filePreview.textContent="File bheji ja rahi hai: "+file.name;
+    dataChannel.send(JSON.stringify({type:"file-meta",name:file.name,size:file.size,mime:file.type||"application/octet-stream"}));
+    const buffer=await file.arrayBuffer();
+    for(let offset=0;offset<buffer.byteLength;offset+=FILE_CHUNK_SIZE){
+      while(dataChannel.bufferedAmount>1024*1024){await new Promise(resolve=>setTimeout(resolve,40));}
+      dataChannel.send(buffer.slice(offset,offset+FILE_CHUNK_SIZE));
+    }
+    dataChannel.send(JSON.stringify({type:"file-end"}));
+    filePreview.textContent="File send ho gayi: "+file.name;
+  };
+}
+
+function listenForIncomingOffers(peerUid){
+  if(unsubscribeIncomingSignals)unsubscribeIncomingSignals();
+  const q=query(collection(db,"chats",activeChatId,"signals"),where("calleeUid","==",currentUser.uid),where("callerUid","==",peerUid),where("status","==","offering"));
+  unsubscribeIncomingSignals=onSnapshot(q,snapshot=>{
+    snapshot.docChanges().forEach(async change=>{
+      if(change.type!=="added")return;
+      const signalDoc=change.doc;const signal=signalDoc.data();
+      if(!signal.offer||peerConnection)return;
+      currentSignalId=signalDoc.id;activePeerUid=peerUid;isCaller=false;
+      createPeerConnection();listenRemoteCandidates();
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(signal.offer));
+      await flushRemoteCandidates();
+      const answer=await peerConnection.createAnswer();await peerConnection.setLocalDescription(answer);
+      await updateDoc(signalDoc.ref,{answer:{type:answer.type,sdp:answer.sdp},status:"answered"});
+      filePreview.textContent="Incoming file connection...";
+    });
+  },error=>console.error("Incoming offer listener:",error));
+}
+
+attachBtn.onclick=()=>fileInput.click();
+fileInput.onchange=()=>{
+  const file=fileInput.files?.[0];if(!file)return;
+  filePreview.textContent="Selected: "+file.name+" ("+Math.round(file.size/1024)+" KB)";
+  if(file.size>MAX_FILE_SIZE){alert("File 5 MB se chhoti honi chahiye.");fileInput.value="";filePreview.textContent="";return;}
+  if(confirm("Is file ko chat partner ko bheje? Dono users ka chat open rehna chahiye.")){
+    startFileTransfer(file).catch(error=>{console.error(error);chatError.textContent="File send setup error: "+error.message;});
+  }
+};
+
+async function openChat(person){
+  if(!person.uid)return;
+  stopWebRTC();
+  activePeerUid=person.uid;
+  activeChatId=[currentUser.uid,person.uid].sort().join("_");
+
+  // Incoming call listener
+  listenForIncomingCalls();
+  
+    // Purane chat ka typing listener band karo
+  if (typingListener) {
+    typingListener();
+    typingListener = null;
+  }
+
+  clearTimeout(typingTimer);
+  chatUsername.textContent=person.username||"User";  
+  
+const chatHeaderPhoto = document.getElementById("chatHeaderPhoto");
+const chatUserStatus = document.getElementById("chatUserStatus");
+
+if (chatHeaderPhoto) {
+  chatHeaderPhoto.src = person.photoURL || "";
+}
+
+if (chatUserStatus) {
+  chatUserStatus.textContent = "ConnectChat";
+    }
+const typingRef = ref(
+  realtimeDB,
+  "typing/" + activeChatId + "/" + person.uid
+);
+
+typingListener = onValue(typingRef, snapshot => {
+  
+  if (chatUserStatus) {
+    chatUserStatus.textContent =
+      snapshot.val() === true ? "Typing..." : "ConnectChat";
+  }
+});
+  
+  listView.style.display="none";  
+  profileView.style.display="none";  
+  chatView.style.display="block";  
+  messagesDiv.innerHTML='<div class="status">Chat khul rahi hai...</div>';  
+  chatError.textContent="";  
+  messageInput.focus();  
+  
+  if(unsubscribeMessages){  
+    unsubscribeMessages();  
+    unsubscribeMessages=null;  
+  }  
+  
+  try{  
+    const chatRef=doc(db,"chats",activeChatId);  
+    const chatSnap=await getDoc(chatRef);  
+    if(!chatSnap.exists()){  
+      await setDoc(chatRef,{  
+        members:[currentUser.uid,person.uid],  
+        createdAt:serverTimestamp(),  
+        lastMessage:"",  
+        updatedAt:serverTimestamp()  
+      });  
+    }  
+  
+    listenForIncomingOffers(person.uid);
+    const messagesQuery=query(
+      collection(db,"chats",activeChatId,"messages"),  
+      orderBy("createdAt","asc")  
+    );  
+    if (seenObserver) {
+  seenObserver.disconnect();
+}
+
+seenObserver = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const messageRef = entry.target.dataset.messageRef;
+
+      if (messageRef) {
+        updateDoc(doc(db, messageRef), {
+          seenAt: serverTimestamp()
+        }).catch(error => console.error("Seen update error:", error));
+      }
+
+      seenObserver.unobserve(entry.target);
+    }
+  });
+}, {
+  root: messagesDiv,
+  threshold: 0.5
+});
+
+        let firstMessagesLoad = true;
+
+    unsubscribeMessages=onSnapshot(messagesQuery,snapshot=>{
+      const previousScrollTop = messagesDiv.scrollTop;
+
+const wasAtBottom =
+  messagesDiv.scrollHeight -
+  messagesDiv.scrollTop -
+  messagesDiv.clientHeight < 100;
+
+const shouldScrollToBottom =
+  firstMessagesLoad || wasAtBottom;
+      messagesDiv.innerHTML="";
+
+      if(snapshot.empty){
+        messagesDiv.innerHTML='<div class="status">Pehla message bhejo 👋</div>';
+        firstMessagesLoad=false;
+        return;
+      }
+
+      // Naye message par receive sound aur notification
+      if(!firstMessagesLoad){
+        snapshot.docChanges().forEach(change=>{
+          if(change.type==="added"){
+            const newMsg=change.doc.data();
+
+            if(newMsg.senderId!==currentUser.uid){
+              playReceiveSound();
+
+              showMessageNotification(
+                newMsg.senderUsername||"User",
+                newMsg.text||"Naya message"
+              );
+            }
+          }
+        });
+      }
+
+     
+firstMessagesLoad=false;
+
+snapshot.forEach(messageDoc=>{
+  const msg=messageDoc.data();
+// Message delivered mark karo
+if (msg.senderId !== currentUser.uid && !msg.deliveredAt) {
+  updateDoc(messageDoc.ref, {
+    deliveredAt: serverTimestamp()
+  }).catch(error => console.error("Delivery update error:", error));
+    }
+  const bubble=document.createElement("div");
+  bubble.dataset.messageId = messageDoc.id;
+  bubble.className="msg "+(
+    msg.senderId===currentUser.uid?"mine":"theirs"
+  );
+
+  bubble.textContent = msg.text || "";
+
+if (msg.editedAt) {
+  const editedLabel = document.createElement("span");
+  editedLabel.textContent = " (Edited)";
+  editedLabel.style.cssText =
+    "font-size:10px;opacity:0.7;margin-left:5px;";
+
+  bubble.appendChild(editedLabel);
+    }
+  // Replied message ka preview bubble mein dikhana
+if (msg.replyTo) {
+  const replyBox = document.createElement("div");
+  replyBox.style.cssText =
+    "padding:6px;margin-bottom:6px;border-left:3px solid #2196F3;background:#00000010;border-radius:5px;font-size:12px;cursor:pointer;";
+
+  replyBox.textContent =
+    msg.replyTo.username + ": " + msg.replyTo.text;
+
+  // Original message par scroll aur highlight
+  replyBox.onclick = () => {
+    const originalBubble = messagesDiv.querySelector(
+      `[data-message-id="${msg.replyTo.id}"]`
+    );
+
+    if (originalBubble) {
+      originalBubble.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+
+      originalBubble.style.transition = "background 0.3s";
+      originalBubble.style.background = "#facc15";
+
+      setTimeout(() => {
+        originalBubble.style.background = "";
+      }, 2000);
+    }
+  };
+
+  bubble.prepend(replyBox);
+    }
+  // Incoming message ko Seen Observer se connect karo
+if (msg.senderId !== currentUser.uid && !msg.seenAt) {
+  bubble.dataset.messageRef = messageDoc.ref.path;
+  seenObserver.observe(bubble);
+    }
+  // Message par Reply option
+bubble.addEventListener("contextmenu", event => {
+  event.preventDefault();
+
+  replyToMessage = {
+    id: messageDoc.id,
+    text: msg.text || "",
+    username: msg.senderUsername || "User"
+  };
+
+  replyPreviewText.textContent =
+    replyToMessage.username + ": " + replyToMessage.text;
+
+  replyPreview.style.display = "block";
+  messageInput.focus();
+});
+
+// Message par single click se dropdown menu
+bubble.style.cursor = "pointer";
+
+bubble.addEventListener("click", () => {
+  const oldMenu = document.getElementById("messageActionMenu");
+  if (oldMenu) oldMenu.remove();
+
+  const menu = document.createElement("div");
+  menu.id = "messageActionMenu";
+
+  menu.style.cssText = `
+    display:flex;
+    gap:6px;
+    margin-top:6px;
+    padding:6px;
+    background:#ffffff;
+    border:1px solid #ddd;
+    border-radius:10px;
+    width:max-content;
+    box-shadow:0 2px 8px #0002;
+  `;
+
+  // Reply button
+  const replyBtn = document.createElement("button");
+  replyBtn.textContent = "↩️ Reply";
+
+  replyBtn.style.cssText = `
+    border:none;
+    background:#2563eb;
+    color:white;
+    padding:8px 12px;
+    border-radius:7px;
+  `;
+
+  replyBtn.onclick = () => {
+    replyToMessage = {
+      id: messageDoc.id,
+      text: msg.text || "",
+      username: msg.senderUsername || "User"
+    };
+
+    replyPreviewText.textContent =
+      replyToMessage.username + ": " + replyToMessage.text;
+
+    replyPreview.style.display = "block";
+    messageInput.focus();
+    menu.remove();
+  };
+
+  menu.appendChild(replyBtn);
+
+  // Delete button sirf apne message par
+  if (msg.senderId === currentUser.uid) {
+    // Edit button sirf apne message par
+const editBtn = document.createElement("button");
+editBtn.textContent = "✏️ Edit";
+
+editBtn.style.cssText = `
+  border:none;
+  background:#2563eb;
+  color:white;
+  padding:8px 12px;
+  border-radius:7px;
+`;
+
+editBtn.onclick = async () => {
+  const newText = prompt("Message edit karo:", msg.text || "");
+
+  if (newText === null || newText.trim() === "" || newText === msg.text) {
+    menu.remove();
+    return;
+  }
+
+  try {
+    await updateDoc(
+      doc(db, "chats", activeChatId, "messages", messageDoc.id),
+      {
+        text: newText.trim(),
+        editedAt: serverTimestamp()
+      }
+    );
+  } catch (error) {
+    console.error(error);
+    alert("Message edit nahi hua: " + error.message);
+  }
+
+  menu.remove();
+};
+
+menu.appendChild(editBtn);
+    const deleteBtn = document.createElement("button");
+    deleteBtn.textContent = "🗑️ Delete";
+
+    deleteBtn.style.cssText = `
+      border:none;
+      background:#dc2626;
+      color:white;
+      padding:8px 12px;
+      border-radius:7px;
+    `;
+
+    deleteBtn.onclick = async () => {
+      if (confirm("Kya tum ye message permanently delete karna chahte ho?")) {
+        try {
+          await deleteDoc(
+            doc(db, "chats", activeChatId, "messages", messageDoc.id)
+          );
+        } catch (error) {
+          console.error(error);
+          alert("Message delete nahi hua: " + error.message);
+        }
+      }
+
+      menu.remove();
+    };
+
+    menu.appendChild(deleteBtn);
+  }
+
+  bubble.after(menu);
+
+  // Chat mein doosri jagah click karne par menu band
+setTimeout(() => {
+  document.addEventListener("click", function closeMessageMenu(event) {
+    if (!menu.contains(event.target)) {
+      menu.remove();
+      document.removeEventListener("click", closeMessageMenu);
+    }
+  });
+}, 0);
+  });
+// Message tick status
+if (msg.senderId === currentUser.uid) {
+  const tick = document.createElement("span");
+
+  if (msg.seenAt) {
+    tick.textContent = " ✓✓";
+    tick.style.color = "#2196F3";
+  } else if (msg.deliveredAt) {
+    tick.textContent = " ✓✓";
+    tick.style.color = "#999999";
+  } else {
+    tick.textContent = " ✓";
+    tick.style.color = "#999999";
+  }
+
+  tick.style.fontSize = "12px";
+  tick.style.marginLeft = "6px";
+  bubble.appendChild(tick);
+    }
+ 
+  messagesDiv.appendChild(bubble);
+});
+
+      if (shouldScrollToBottom) {
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+} else {
+  messagesDiv.scrollTop = previousScrollTop;
+    }
+
+
+    },error=>{
+      console.error(error);
+      chatError.textContent="Messages load error: "+error.message;
+    });
+  }catch(error){  
+    console.error(error);  
+    chatError.textContent="Chat open nahi hui: "+error.message;  
+    messagesDiv.innerHTML='<div class="status">Chat load nahi ho saki.</div>';  
+  }  
+}  
+
+  cancelReplyBtn.onclick = () => {
+  replyToMessage = null;
+  replyPreview.style.display = "none";
+  replyPreviewText.textContent = "";
+};  
+backBtn.onclick=()=>{
+  if(unsubscribeIncomingCalls){
+  unsubscribeIncomingCalls();
+  unsubscribeIncomingCalls=null;
+    }
+  stopWebRTC();
+  fileInput.value="";filePreview.textContent="";
+  chatView.style.display="none";  
+  listView.style.display="block";  
+  if(unsubscribeMessages){  
+    unsubscribeMessages();  
+    unsubscribeMessages=null;  
+  }  
+  clearTimeout(typingTimer);
+
+if (typingListener) {
+  typingListener();
+  typingListener = null;
+}
+
+if (currentUser && activeChatId) {
+  set(
+    ref(realtimeDB, "typing/" + activeChatId + "/" + currentUser.uid),
+    false
+  );
+    }
+  activeChatId=null;  
+};  
+  messageInput.addEventListener("input", () => {
+  if (!activeChatId || !currentUser) return;
+
+  const ownTypingRef = ref(
+    realtimeDB,
+    "typing/" + activeChatId + "/" + currentUser.uid
+  );
+
+  set(ownTypingRef, messageInput.value.trim().length > 0)
+    .catch(error => console.error("Typing error:", error));
+
+  clearTimeout(typingTimer);
+
+  typingTimer = setTimeout(() => {
+    set(ownTypingRef, false)
+      .catch(error => console.error("Typing stop error:", error));
+  }, 1500);
+});
+sendForm.onsubmit=async event=>{  
+  event.preventDefault();  
+  const text=messageInput.value.trim();  
+  if(!text||!activeChatId)return;  
+  sendBtn.disabled=true;  
+  chatError.textContent="";  
+  try{  
+    const chatRef=doc(db,"chats",activeChatId);  
+    await addDoc(collection(db,"chats",activeChatId,"messages"),{  
+      text,  
+      senderId:currentUser.uid,  
+      senderUsername:currentProfile.username||"User",  
+      createdAt:serverTimestamp(),
+deliveredAt:null,
+seenAt:null,
+      replyTo: replyToMessage ? {
+  id: replyToMessage.id,
+  text: replyToMessage.text,
+  username: replyToMessage.username
+} : null,
+    });  
+    await updateDoc(chatRef,{  
+      lastMessage:text,  
+      updatedAt:serverTimestamp()  
+    });  
+    messageInput.value="";  
+    replyToMessage = null;
+replyPreview.style.display = "none";
+replyPreviewText.textContent = "";
+    clearTimeout(typingTimer);
+
+set(
+  ref(realtimeDB, "typing/" + activeChatId + "/" + currentUser.uid),
+  false
+).catch(error => console.error("Typing stop error:", error));
+    playSendSound();
+    messageInput.focus();  
+    await loadRecentChats();  
+  }catch(error){  
+    console.error(error);  
+    chatError.textContent="Message send nahi hua: "+error.message;  
+  }finally{  
+    sendBtn.disabled=false;  
+  }  
+};  
+  
+logoutBtn.onclick=async()=>{
+  stopWebRTC();
+  logoutBtn.disabled=true;  
+  try{  
+    if (currentUser) await set(ref(realtimeDB, "status/" + currentUser.uid), { state: "offline", lastChanged: Date.now() });
+    if (statusListener) { statusListener(); statusListener = null; }
+    await signOut(auth);  
+    location.href="login.html";  
+  }catch(error){  
+    alert("Logout error: "+error.message);  
+    logoutBtn.disabled=false;  
+  }  
+};  
+</script>  </body>  
+  </html>
