@@ -1239,7 +1239,7 @@ function addCallTracks(){
         callerUid: currentUser.uid,
         calleeUid: activePeerUid,
         type: type,
-        status: "ringing",
+        status: "creating",,
         createdAt: serverTimestamp()
       }
     );
@@ -1251,11 +1251,9 @@ function addCallTracks(){
     await callPeerConnection.setLocalDescription(offer);
 
     await updateDoc(callRef,{
-      offer: {
-        type: offer.type,
-        sdp: offer.sdp
-      }
-    });
+  offer: { type: offer.type, sdp: offer.sdp },
+  status: "ringing"
+});
 
    unsubscribeCallDoc = onSnapshot(callRef,async snapshot=>{
 
