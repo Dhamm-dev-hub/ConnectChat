@@ -1383,9 +1383,9 @@ unsubscribeCallDoc = onSnapshot(callDoc.ref, snapshot => {
   const data = snapshot.data();
 
   if(data && data.status === "ended"){
-    endCall(true);
-    alert("Call doosre user ne end kar di.");
-  }
+  endCall(true);
+  alert("Call doosre user ne end kar di.");
+    }
 
 });
   }catch(error){
