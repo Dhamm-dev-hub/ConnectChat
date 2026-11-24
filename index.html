@@ -110,10 +110,10 @@ footer{text-align:center;color:#888;padding:18px;font-size:13px}
   <script type="module">  
 import {auth,db} from "./firebase.js";  
 import {onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";  
-import {  
-  collection,getDocs,doc,getDoc,setDoc,addDoc,updateDoc,  
-  serverTimestamp,query,orderBy,onSnapshot,where  
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";  
+import {
+  collection,getDocs,doc,getDoc,setDoc,addDoc,updateDoc,deleteDoc,
+  serverTimestamp,query,orderBy,onSnapshot,where
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import {
   getDatabase,
   ref,
