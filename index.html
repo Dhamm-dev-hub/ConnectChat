@@ -683,6 +683,8 @@ let currentProfile={};
 let allUsers=[];  
 let activeChatId=null;  
 let unsubscribeMessages=null;
+    let typingListener = null;
+let typingTimer = null;
     const messaging = getMessaging(getApp());
     // ===== FOREGROUND FCM NOTIFICATION =====
 
@@ -1154,7 +1156,14 @@ async function openChat(person){
   if(!person.uid)return;
   stopWebRTC();
   activePeerUid=person.uid;
-  activeChatId=[currentUser.uid,person.uid].sort().join("_");  
+  activeChatId=[currentUser.uid,person.uid].sort().join("_");
+    // Purane chat ka typing listener band karo
+  if (typingListener) {
+    typingListener();
+    typingListener = null;
+  }
+
+  clearTimeout(typingTimer);
   chatUsername.textContent=person.username||"User";  
   
 const chatHeaderPhoto = document.getElementById("chatHeaderPhoto");
@@ -1167,7 +1176,18 @@ if (chatHeaderPhoto) {
 if (chatUserStatus) {
   chatUserStatus.textContent = "ConnectChat";
     }
-    
+const typingRef = ref(
+  realtimeDB,
+  "typing/" + activeChatId + "/" + person.uid
+);
+
+typingListener = onValue(typingRef, snapshot => {
+  if (chatUserStatus) {
+    chatUserStatus.textContent =
+      snapshot.val() === true ? "Typing..." : "ConnectChat";
+  }
+});
+  
   listView.style.display="none";  
   profileView.style.display="none";  
   chatView.style.display="block";  
@@ -1312,9 +1332,39 @@ backBtn.onclick=()=>{
     unsubscribeMessages();  
     unsubscribeMessages=null;  
   }  
+  clearTimeout(typingTimer);
+
+if (typingListener) {
+  typingListener();
+  typingListener = null;
+}
+
+if (currentUser && activeChatId) {
+  set(
+    ref(realtimeDB, "typing/" + activeChatId + "/" + currentUser.uid),
+    false
+  );
+    }
   activeChatId=null;  
 };  
-  
+  messageInput.addEventListener("input", () => {
+  if (!activeChatId || !currentUser) return;
+
+  const ownTypingRef = ref(
+    realtimeDB,
+    "typing/" + activeChatId + "/" + currentUser.uid
+  );
+
+  set(ownTypingRef, messageInput.value.trim().length > 0)
+    .catch(error => console.error("Typing error:", error));
+
+  clearTimeout(typingTimer);
+
+  typingTimer = setTimeout(() => {
+    set(ownTypingRef, false)
+      .catch(error => console.error("Typing stop error:", error));
+  }, 1500);
+});
 sendForm.onsubmit=async event=>{  
   event.preventDefault();  
   const text=messageInput.value.trim();  
@@ -1334,6 +1384,12 @@ sendForm.onsubmit=async event=>{
       updatedAt:serverTimestamp()  
     });  
     messageInput.value="";  
+    clearTimeout(typingTimer);
+
+set(
+  ref(realtimeDB, "typing/" + activeChatId + "/" + currentUser.uid),
+  false
+).catch(error => console.error("Typing stop error:", error));
     playSendSound();
     messageInput.focus();  
     await loadRecentChats();  
