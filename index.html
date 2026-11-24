@@ -3,48 +3,413 @@
 <meta charset="UTF-8">  
 <meta name="viewport" content="width=device-width, initial-scale=1.0">  
 <title>ConnectChat</title>  
-<style>  
-*{box-sizing:border-box;margin:0;padding:0}  
-body{font-family:Arial,sans-serif;background:#f0f2f5;color:#222}  
-header{background:#075e54;color:white;padding:15px;display:flex;align-items:center;justify-content:space-between}  
-header h1{font-size:21px}  
-button{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-size:15px}  
-#logoutBtn{background:white;color:#075e54;font-weight:bold}  
-#profileBtn{background:white;color:#075e54;font-weight:bold}  
-.container{max-width:650px;margin:auto;padding:15px}  
-.card{background:white;border-radius:12px;padding:16px;margin-bottom:15px;box-shadow:0 2px 8px #0001}  
-h2,h3{color:#075e54;margin-bottom:10px}  
-#searchInput{width:100%;padding:13px;border:1px solid #ddd;border-radius:9px;font-size:16px;margin:12px 0}  
-.user,.chatItem{padding:14px;border-bottom:1px solid #eee;cursor:pointer}  
-.user:hover,.chatItem:hover{background:#f3f8f7}  
-.userName{font-weight:bold;color:#075e54;font-size:17px}  
-.status{text-align:center;padding:15px;color:#777}  
-#chatView,#profileView{display:none}  
-.chatHeader{display:flex;align-items:center;gap:10px;border-bottom:1px solid #eee;padding-bottom:12px}  
-#backBtn,#profileBackBtn{background:#e8f5f2;color:#075e54}  
-#chatUsername{font-weight:bold;color:#075e54;font-size:18px}  
-#messages{height:55vh;min-height:300px;overflow-y:auto;padding:12px;background:#e9f5f2;border-radius:10px;margin:12px 0;display:flex;flex-direction:column;gap:8px}  
-.msg{max-width:80%;padding:10px 12px;border-radius:12px;overflow-wrap:anywhere}  
-.mine{align-self:flex-end;background:#d5f5dc}  
-.theirs{align-self:flex-start;background:white}  
-#sendForm{display:flex;gap:8px}  
-#messageInput{flex:1;min-width:0;padding:12px;border:1px solid #ddd;border-radius:9px;font-size:16px}  
-#sendBtn{background:#075e54;color:white;font-weight:bold}  
-#sendBtn:disabled{opacity:.5}  
-#chatError,#profileMessage{color:#c00;font-size:13px;margin-top:8px}  
-.chatItem{display:flex;align-items:center;justify-content:space-between;gap:10px}  
-.chatDetails{min-width:0;flex:1}  
-.chatPreview{font-size:14px;color:#777;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}  
-.chatTime{font-size:12px;color:#888;white-space:nowrap}  
-.profileTop{text-align:center;padding:10px}  
-#profilePhoto{width:100px;height:100px;border-radius:50%;object-fit:cover;background:#e8f5f2;margin:10px auto;display:block}  
-#profileDisplayName{font-size:21px;font-weight:bold;color:#075e54;margin:8px}  
-#profileAboutDisplay{color:#666;margin:8px}  
-.profileInput{width:100%;padding:12px;border:1px solid #ddd;border-radius:9px;font-size:16px;margin:8px 0}  
-.profileLabel{display:block;margin-top:12px;font-weight:bold;color:#075e54}  
-#saveProfileBtn{background:#075e54;color:white;font-weight:bold;width:100%;margin-top:12px}  
-footer{text-align:center;color:#888;padding:18px;font-size:13px}  
-</style>  
+<style> 
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --green: #008f72;
+  --green-dark: #006b58;
+  --blue: #2685d9;
+  --bg: #eaf0f3;
+  --white: #ffffff;
+  --text: #172b35;
+  --muted: #71808b;
+  --border: #e5ebef;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+header {
+  background: linear-gradient(120deg, #007d68, #075e54);
+  color: white;
+  padding: 15px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 3px 12px #0002;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+header h1 {
+  font-size: 22px;
+  letter-spacing: .3px;
+}
+
+button {
+  border: 0;
+  border-radius: 10px;
+  padding: 11px 15px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: .2s;
+}
+
+button:active {
+  transform: scale(.96);
+}
+
+#logoutBtn, #profileBtn {
+  background: #ffffff;
+  color: var(--green-dark);
+}
+
+.container {
+  max-width: 850px;
+  margin: auto;
+  padding: 20px 15px;
+}
+
+.card {
+  background: var(--white);
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 16px;
+  box-shadow: 0 3px 15px #1833440b;
+  border: 1px solid #edf1f3;
+}
+
+h2, h3 {
+  color: var(--green-dark);
+  margin-bottom: 12px;
+}
+
+#searchInput {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 25px;
+  font-size: 15px;
+  margin: 12px 0;
+  outline: none;
+  background: #f6f9fa;
+}
+
+#searchInput:focus,
+#messageInput:focus,
+.profileInput:focus {
+  border-color: var(--green);
+}
+
+.user, .chatItem {
+  padding: 15px 10px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background .2s;
+}
+
+.user:hover, .chatItem:hover {
+  background: #f0f8f6;
+}
+
+.userName {
+  font-weight: bold;
+  color: var(--green-dark);
+  font-size: 16px;
+}
+
+.status {
+  text-align: center;
+  padding: 18px;
+  color: var(--muted);
+}
+
+#chatView, #profileView {
+  display: none;
+}
+
+.chatHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 14px;
+}
+
+#backBtn, #profileBackBtn {
+  background: #e8f5f2;
+  color: var(--green-dark);
+}
+
+#chatUsername {
+  font-weight: bold;
+  color: var(--green-dark);
+  font-size: 18px;
+}
+
+#messages {
+  height: 55vh;
+  min-height: 300px;
+  overflow-y: auto;
+  padding: 15px;
+  background-color: #e7f0ec;
+  background-image: radial-gradient(#9bb9aa22 1px, transparent 1px);
+  background-size: 18px 18px;
+  border-radius: 13px;
+  margin: 14px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.msg {
+  max-width: 82%;
+  padding: 11px 14px;
+  border-radius: 14px;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+  box-shadow: 0 1px 2px #0001;
+}
+
+.mine {
+  align-self: flex-end;
+  background: #d2f8df;
+  border-bottom-right-radius: 4px;
+}
+
+.theirs {
+  align-self: flex-start;
+  background: white;
+  border-bottom-left-radius: 4px;
+}
+
+#sendForm {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+#messageInput {
+  flex: 1;
+  min-width: 0;
+  padding: 13px 16px;
+  border: 1px solid var(--border);
+  border-radius: 25px;
+  font-size: 15px;
+  outline: none;
+}
+
+#sendBtn {
+  background: var(--green);
+  color: white;
+  border-radius: 25px;
+  padding: 13px 18px;
+}
+
+#sendBtn:disabled {
+  opacity: .5;
+}
+
+#attachBtn {
+  background: #edf5f3;
+  color: var(--green-dark);
+  border-radius: 50%;
+  padding: 12px;
+}
+
+#chatError, #profileMessage {
+  color: #c00;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.chatItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.chatDetails {
+  min-width: 0;
+  flex: 1;
+}
+
+.chatPreview {
+  font-size: 14px;
+  color: var(--muted);
+  margin-top: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chatTime {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.profileTop {
+  text-align: center;
+  padding: 12px;
+}
+
+#profilePhoto {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #e8f5f2;
+  margin: 10px auto;
+  display: block;
+  border: 4px solid #e0f5ed;
+}
+
+#profileDisplayName {
+  font-size: 21px;
+  font-weight: bold;
+  color: var(--green-dark);
+  margin: 8px;
+}
+
+#profileAboutDisplay {
+  color: var(--muted);
+  margin: 8px;
+}
+
+.profileInput {
+  width: 100%;
+  padding: 13px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 15px;
+  margin: 8px 0;
+  outline: none;
+}
+
+.profileLabel {
+  display: block;
+  margin-top: 12px;
+  font-weight: bold;
+  color: var(--green-dark);
+}
+
+#saveProfileBtn {
+  background: var(--green);
+  color: white;
+  font-weight: bold;
+  width: 100%;
+  margin-top: 12px;
+}
+
+#enableNotificationsBtn {
+  background: var(--green);
+  color: white;
+  margin-top: 12px;
+}
+
+footer {
+  text-align: center;
+  color: var(--muted);
+  padding: 18px;
+  font-size: 13px;
+}
+
+@media (max-width: 600px) {
+  header {
+    padding: 13px 10px;
+  }
+
+  header h1 {
+    font-size: 19px;
+  }
+
+  header button {
+    padding: 9px 10px;
+    font-size: 12px;
+  }
+
+  .container {
+    padding: 12px 9px;
+  }
+
+  .card {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  #messages {
+    height: 58vh;
+  }
+
+  .msg {
+    max-width: 88%;
+  }
+}
+  
+.chatAvatar {
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #dcefe9;
+}
+
+.chatItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 5px;
+  border-bottom: 1px solid #edf0f2;
+}
+
+.chatDetails {
+  flex: 1;
+  min-width: 0;
+}
+
+.chatTime {
+  align-self: flex-start;
+  font-size: 11px;
+  color: #008f72;
+    }
+  
+.chatHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0 15px;
+}
+
+#chatHeaderPhoto {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #dcefe9;
+}
+
+.chatUserInfo {
+  flex: 1;
+}
+
+#chatUserStatus {
+  font-size: 12px;
+  color: #008f72;
+  margin-top: 4px;
+}
+
+#chatUsername {
+  font-size: 17px;
+  font-weight: bold;
+  color: #075e54;
+  }
+  
+   </style> 
+  
 </head>  
 <body>  <header>  
   <h1>ConnectChat 💬</h1>  
@@ -52,28 +417,57 @@ footer{text-align:center;color:#888;padding:18px;font-size:13px}
     <button id="profileBtn">👤 Profile</button>  
     <button id="logoutBtn">Logout</button>  
   </div>  
-</header>  <ma<in class="container">  <!-- HOME -->  <div id="listView">  
-  <div class="card">
-  <h2>Welcome to ConnectChat!</h2>
-  <div id="profileName">Loading...</div>
-
-<button id="enableNotificationsBtn">
+</header>  <ma<in class="container"> 
   
-  </button>
+<!-- HOME -->
+<div id="listView">
+
+  <div class="card">
+    <h2>ConnectChat 💬</h2>
+    <div id="profileName">Loading...</div>
+  </div>
+
+  <div class="card">
+    <h3>Chats</h3>
+    <input
+      id="searchInput"
+      type="search"
+      placeholder="🔍 Search people..."
+    >
+
+    <div id="recentChats" class="status">
+      Chats load ho rahi hain...
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🌐 Discover People</h3>
+    <div id="usersList" class="status">
+      Users load ho rahe hain...
+    </div>
+  </div>
+
 </div>
-  <div class="card">  
-    <h3>💬 Recent Chats</h3>  
-    <div id="recentChats" class="status">Chats load ho rahi hain...</div>  
-  </div>    <div class="card">  
-    <h3>👥 Find People</h3>  
-    <input id="searchInput" type="search" placeholder="Username search karo...">  
-    <div id="usersList" class="status">Users load ho rahe hain...</div>  
-  </div>  
+  
 </div>  <!-- CHAT -->  <div id="chatView" class="card">  
-  <div class="chatHeader">  
-    <button id="backBtn">← Back</button>  
-    <div id="chatUsername">Username</div>  
-  </div>  
+  
+<div class="chatHeader">
+
+  <button id="backBtn">←</button>
+
+  <img
+    id="chatHeaderPhoto"
+    src=""
+    alt="Profile"
+  >
+
+  <div class="chatUserInfo">
+    <div id="chatUsername">Username</div>
+    <div id="chatUserStatus">ConnectChat</div>
+  </div>
+
+</div>
+  
   <div id="messages">  
     <div class="status">Messages load ho rahe hain...</div>  
   </div>  
@@ -497,57 +891,127 @@ async function loadRecentChats(){
     chatData.sort((a,b)=>{  
       const ta=a.updatedAt?.toMillis?.()||0;  
       const tb=b.updatedAt?.toMillis?.()||0;  
-      return tb-ta;  
-    });  
-  
-    recentChats.innerHTML="";  
-    if(chatData.length===0){  
-      recentChats.textContent="Abhi koi chat nahi. Find People se chat shuru karo.";  
-      return;  
-    }  
-  
-    for(const chat of chatData){  
-      const otherUid=(chat.members||[]).find(uid=>uid!==currentUser.uid);  
-      if(!otherUid)continue;  
-      let otherProfile={};  
-      try{  
-        const userSnap=await getDoc(doc(db,"users",otherUid));  
-        if(userSnap.exists())otherProfile=userSnap.data();  
-      }catch(e){console.warn(e);}  
-  
-      const row=document.createElement("div");  
-      row.className="chatItem";  
-      const details=document.createElement("div");  
-      details.className="chatDetails";  
-      const name=document.createElement("div");  
-      name.className="userName";  
-      name.textContent=otherProfile.username||"User";  
-      const preview=document.createElement("div");  
-      preview.className="chatPreview";  
-      preview.textContent=chat.lastMessage||"Chat shuru karo";  
-      details.append(name,preview);  
-      const time=document.createElement("div");  
-      time.className="chatTime";  
-      time.textContent=formatTime(chat.updatedAt);  
-      row.append(details,time);  
-      row.onclick=()=>openChat(otherProfile.uid?otherProfile:{uid:otherUid,username:"User"});  
-      recentChats.appendChild(row);  
-    }  
-    if(!recentChats.children.length)recentChats.textContent="Abhi koi chat nahi.";  
-  }catch(error){  
-    console.error(error);  
-    recentChats.textContent="Chats load nahi hui: "+error.message;  
-  }  
-}  
-  
-function formatTime(timestamp){  
-  if(!timestamp?.toDate)return "";  
-  const date=timestamp.toDate();  
-  if(date.toDateString()===new Date().toDateString()){  
-    return date.toLocaleTimeString("hi-IN",{hour:"2-digit",minute:"2-digit"});  
-  }  
-  return date.toLocaleDateString("hi-IN",{day:"numeric",month:"short"});  
-}  
+
+async function loadRecentChats(){
+  recentChats.textContent="Chats load ho rahi hain...";
+
+  try{
+    const chatsQuery=query(
+      collection(db,"chats"),
+      where("members","array-contains",currentUser.uid)
+    );
+
+    const snapshot=await getDocs(chatsQuery);
+
+    const chatData=snapshot.docs.map(d=>({
+      id:d.id,
+      ...d.data()
+    }));
+
+    chatData.sort((a,b)=>{
+      const ta=a.updatedAt?.toMillis?.()||0;
+      const tb=b.updatedAt?.toMillis?.()||0;
+      return tb-ta;
+    });
+
+    recentChats.innerHTML="";
+
+    if(chatData.length===0){
+      recentChats.textContent="Abhi koi chat nahi. Find People se chat shuru karo.";
+      return;
+    }
+
+    for(const chat of chatData){
+
+      const otherUid=(chat.members||[]).find(
+        uid=>uid!==currentUser.uid
+      );
+
+      if(!otherUid)continue;
+
+      let otherProfile={};
+
+      try{
+        const userSnap=await getDoc(
+          doc(db,"users",otherUid)
+        );
+
+        if(userSnap.exists()){
+          otherProfile=userSnap.data();
+        }
+      }catch(e){
+        console.warn(e);
+      }
+
+      const row=document.createElement("div");
+      row.className="chatItem";
+
+      const photo=document.createElement("img");
+      photo.className="chatAvatar";
+      photo.src=otherProfile.photoURL||"";
+      photo.alt="Profile";
+      photo.onerror=()=>{
+        photo.style.display="none";
+      };
+
+      const details=document.createElement("div");
+      details.className="chatDetails";
+
+      const name=document.createElement("div");
+      name.className="userName";
+      name.textContent=otherProfile.username||"User";
+
+      const preview=document.createElement("div");
+      preview.className="chatPreview";
+      preview.textContent=chat.lastMessage||"Chat shuru karo";
+
+      details.append(name,preview);
+
+      const time=document.createElement("div");
+      time.className="chatTime";
+      time.textContent=formatTime(chat.updatedAt);
+
+      row.append(photo,details,time);
+
+      row.onclick=()=>{
+        openChat(
+          otherProfile.uid
+            ? otherProfile
+            : {uid:otherUid,username:"User"}
+        );
+      };
+
+      recentChats.appendChild(row);
+    }
+
+    if(!recentChats.children.length){
+      recentChats.textContent="Abhi koi chat nahi.";
+    }
+
+  }catch(error){
+    console.error(error);
+    recentChats.textContent="Chats load nahi hui: "+error.message;
+  }
+}
+
+function formatTime(timestamp){
+  if(!timestamp?.toDate)return "";
+
+  const date=timestamp.toDate();
+
+  if(date.toDateString()===new Date().toDateString()){
+    return date.toLocaleTimeString("hi-IN",{
+      hour:"2-digit",
+      minute:"2-digit"
+    });
+  }
+
+  return date.toLocaleDateString("hi-IN",{
+    day:"numeric",
+    month:"short"
+  });
+    }
+    
   
 // ---------- WEBRTC SIGNALING + FILE TRANSFER ----------
 async function saveIceCandidate(candidate, collectionName) {
@@ -707,6 +1171,18 @@ async function openChat(person){
   activePeerUid=person.uid;
   activeChatId=[currentUser.uid,person.uid].sort().join("_");  
   chatUsername.textContent=person.username||"User";  
+  
+const chatHeaderPhoto = document.getElementById("chatHeaderPhoto");
+const chatUserStatus = document.getElementById("chatUserStatus");
+
+if (chatHeaderPhoto) {
+  chatHeaderPhoto.src = person.photoURL || "";
+}
+
+if (chatUserStatus) {
+  chatUserStatus.textContent = "ConnectChat";
+    }
+    
   listView.style.display="none";  
   profileView.style.display="none";  
   chatView.style.display="block";  
