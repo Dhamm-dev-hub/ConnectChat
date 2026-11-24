@@ -886,21 +886,6 @@ async function loadRecentChats(){
       collection(db,"chats"),  
       where("members","array-contains",currentUser.uid)  
     );  
-    const snapshot=await getDocs(chatsQuery);  
-    const chatData=snapshot.docs.map(d=>({id:d.id,...d.data()}));  
-    chatData.sort((a,b)=>{  
-      const ta=a.updatedAt?.toMillis?.()||0;  
-      const tb=b.updatedAt?.toMillis?.()||0;  
-
-async function loadRecentChats(){
-  recentChats.textContent="Chats load ho rahi hain...";
-
-  try{
-    const chatsQuery=query(
-      collection(db,"chats"),
-      where("members","array-contains",currentUser.uid)
-    );
-
     const snapshot=await getDocs(chatsQuery);
 
     const chatData=snapshot.docs.map(d=>({
