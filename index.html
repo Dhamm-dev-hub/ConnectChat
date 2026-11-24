@@ -1306,7 +1306,16 @@ if (msg.senderId !== currentUser.uid && !msg.deliveredAt) {
     msg.senderId===currentUser.uid?"mine":"theirs"
   );
 
-  bubble.textContent=msg.text||"";
+  bubble.textContent = msg.text || "";
+
+if (msg.editedAt) {
+  const editedLabel = document.createElement("span");
+  editedLabel.textContent = " (Edited)";
+  editedLabel.style.cssText =
+    "font-size:10px;opacity:0.7;margin-left:5px;";
+
+  bubble.appendChild(editedLabel);
+    }
   // Replied message ka preview bubble mein dikhana
 if (msg.replyTo) {
   const replyBox = document.createElement("div");
@@ -1414,6 +1423,43 @@ bubble.addEventListener("click", () => {
 
   // Delete button sirf apne message par
   if (msg.senderId === currentUser.uid) {
+    // Edit button sirf apne message par
+const editBtn = document.createElement("button");
+editBtn.textContent = "✏️ Edit";
+
+editBtn.style.cssText = `
+  border:none;
+  background:#2563eb;
+  color:white;
+  padding:8px 12px;
+  border-radius:7px;
+`;
+
+editBtn.onclick = async () => {
+  const newText = prompt("Message edit karo:", msg.text || "");
+
+  if (newText === null || newText.trim() === "" || newText === msg.text) {
+    menu.remove();
+    return;
+  }
+
+  try {
+    await updateDoc(
+      doc(db, "chats", activeChatId, "messages", messageDoc.id),
+      {
+        text: newText.trim(),
+        editedAt: serverTimestamp()
+      }
+    );
+  } catch (error) {
+    console.error(error);
+    alert("Message edit nahi hua: " + error.message);
+  }
+
+  menu.remove();
+};
+
+menu.appendChild(editBtn);
     const deleteBtn = document.createElement("button");
     deleteBtn.textContent = "🗑️ Delete";
 
