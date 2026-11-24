@@ -1182,6 +1182,7 @@ const typingRef = ref(
 );
 
 typingListener = onValue(typingRef, snapshot => {
+  
   if (chatUserStatus) {
     chatUserStatus.textContent =
       snapshot.val() === true ? "Typing..." : "ConnectChat";
@@ -1221,6 +1222,15 @@ typingListener = onValue(typingRef, snapshot => {
         let firstMessagesLoad = true;
 
     unsubscribeMessages=onSnapshot(messagesQuery,snapshot=>{
+      const previousScrollTop = messagesDiv.scrollTop;
+
+const wasAtBottom =
+  messagesDiv.scrollHeight -
+  messagesDiv.scrollTop -
+  messagesDiv.clientHeight < 100;
+
+const shouldScrollToBottom =
+  firstMessagesLoad || wasAtBottom;
       messagesDiv.innerHTML="";
 
       if(snapshot.empty){
@@ -1344,7 +1354,11 @@ if (msg.senderId === currentUser.uid) {
   messagesDiv.appendChild(bubble);
 });
 
-messagesDiv.scrollTop=messagesDiv.scrollHeight;
+      if (shouldScrollToBottom) {
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+} else {
+  messagesDiv.scrollTop = previousScrollTop;
+    }
 
 
     },error=>{
