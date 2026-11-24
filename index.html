@@ -465,7 +465,10 @@ footer {
     <div id="chatUsername">Username</div>
     <div id="chatUserStatus">ConnectChat</div>
   </div>
-
+<div style="display:flex;gap:6px;margin-left:auto;">
+  <button type="button" id="audioCallBtn">📞</button>
+  <button type="button" id="videoCallBtn">📹</button>
+</div>
 </div>
   
   <div id="messages">  
@@ -483,6 +486,14 @@ footer {
     <button id="sendBtn" type="submit">Send</button>  
   </form>  
   <div id="filePreview" style="font-size:13px;margin-top:8px;overflow-wrap:anywhere"></div>
+  <audio id="remoteAudio" autoplay></audio>
+
+<video
+  id="remoteVideo"
+  autoplay
+  playsinline
+  style="display:none;width:100%;max-height:250px;border-radius:12px;"
+></video>
   <div id="chatError"></div>  
 </div>  <!-- PROFILE -->  <div id="profileView" class="card">  
   <div class="chatHeader">  
@@ -559,6 +570,8 @@ const listView=document.getElementById("listView");
 const chatView=document.getElementById("chatView");  
 const profileView=document.getElementById("profileView");  
 const backBtn=document.getElementById("backBtn");  
+const audioCallBtn = document.getElementById("audioCallBtn");
+const videoCallBtn = document.getElementById("videoCallBtn");
 const profileBackBtn=document.getElementById("profileBackBtn");  
 const chatUsername=document.getElementById("chatUsername");  
 const messagesDiv=document.getElementById("messages");  
@@ -1028,10 +1041,57 @@ function stopWebRTC(){
   remoteDescriptionReady=false; pendingRemoteCandidates=[];
   receivedFileMeta=null; receivedFileChunks=[]; receivedFileBytes=0;
 }
-
+// ---------- AUDIO / VIDEO CALLING ----------
+let localStream = null;
+let remoteStream = null;
+let currentCallType = null;
+let isCallActive = false;
+let callListener = null;
+let incomingCallId = null;
 function createPeerConnection(){
   peerConnection=new RTCPeerConnection(rtcConfig);
   peerConnection.ondatachannel=(event)=>{dataChannel=event.channel;setupDataChannel();};
+    peerConnection.ontrack=(event)=>{
+    if(!remoteStream){
+      remoteStream=new MediaStream();
+    }
+
+    event.streams[0].getTracks().forEach(track=>{
+      remoteStream.addTrack(track);
+    });
+
+    const remoteAudio=document.getElementById("remoteAudio");
+    const remoteVideo=document.getElementById("remoteVideo");
+
+    if(remoteAudio){
+      remoteAudio.srcObject=remoteStream;
+    }
+
+    if(remoteVideo){
+      remoteVideo.srcObject=remoteStream;
+    }
+  };
+  // Audio/Video call ke liye remote stream
+peerConnection.ontrack=(event)=>{
+  if(!remoteStream){
+    remoteStream=new MediaStream();
+  }
+
+  event.streams[0].getTracks().forEach(track=>{
+    remoteStream.addTrack(track);
+  });
+
+  const remoteAudio=document.getElementById("remoteAudio");
+  const remoteVideo=document.getElementById("remoteVideo");
+
+  if(remoteAudio){
+    remoteAudio.srcObject=remoteStream;
+  }
+
+  if(remoteVideo){
+    remoteVideo.srcObject=remoteStream;
+  }
+};
   peerConnection.onicecandidate=async(event)=>{
     if(event.candidate){await saveIceCandidate(event.candidate,isCaller?"callerCandidates":"calleeCandidates");}
   };
@@ -1041,7 +1101,28 @@ function createPeerConnection(){
   };
   return peerConnection;
 }
+async function getCallMedia(type){
+  try{
+    localStream=await navigator.mediaDevices.getUserMedia({
+      audio:true,
+      video:type==="video"
+    });
 
+    return localStream;
+
+  }catch(error){
+    console.error("Media access error:",error);
+    alert("Microphone ya Camera permission nahi mili.");
+    throw error;
+  }
+    }
+    function addCallTracks(){
+  if(!localStream || !peerConnection)return;
+
+  localStream.getTracks().forEach(track=>{
+    peerConnection.addTrack(track,localStream);
+  });
+  }
 function setupDataChannel(){
   if(!dataChannel)return;
   dataChannel.binaryType="arraybuffer";
