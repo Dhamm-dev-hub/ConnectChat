@@ -121,6 +121,13 @@ import {
   onDisconnect,
   set
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import {
+  getMessaging,
+  getToken,
+  onMessage
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+
+import { getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   
 const profileName=document.getElementById("profileName");  
 const usersList=document.getElementById("usersList");  
@@ -205,32 +212,62 @@ function playReceiveSound() {
 }
 
 async function enableChatNotifications() {
-  if (!("Notification" in window)) {
-    alert("Is browser mein notifications support nahi hain.");
-    return;
-  }
+  try {
+    if (!("Notification" in window)) {
+      alert("Is browser mein notifications support nahi hain.");
+      return;
+    }
 
-  const permission = await Notification.requestPermission();
+    const permission = await Notification.requestPermission();
 
-  if (permission === "granted") {
-    alert("Notifications ON ho gaye 🔔");
-  } else {
-    alert("Notification permission allow nahi hui.");
+    if (permission !== "granted") {
+      alert("Notification permission allow nahi hui.");
+      return;
+    }
+
+    const swRegistration = await navigator.serviceWorker.register(
+      "./firebase-messaging-sw.js"
+    );
+
+    const token = await getToken(messaging, {
+      vapidKey: "BFBurjf8J-7C4x9hR4GBAsPxQkAfHSR0u45V-a9xWpJ9L2SNB3LUjcQ_xX27E64qVSGa06_Jkb3WFAXjmnWQgho",
+      serviceWorkerRegistration: swRegistration
+    });
+
+   if (token) {
+  console.log("FCM Token:", token);
+
+  await setDoc(
+    doc(db, "users", currentUser.uid),
+    {
+      fcmToken: token
+    },
+    { merge: true }
+  );
+
+  alert("Notifications ON ho gaye 🔔");
+} else {
+  alert("FCM token nahi mila.");
+}
+  } catch (error) {
+    console.error("Notification error:", error);
+    alert("Notification error: " + error.message);
   }
 }
+
+
 const enableNotificationsBtn =
   document.getElementById("enableNotificationsBtn");
 
 if (enableNotificationsBtn) {
   enableNotificationsBtn.addEventListener("click", () => {
-    alert("Notification button click ho raha hai!");
-
     enableChatNotifications();
   });
 } else {
   console.error("Notification button nahi mila!");
 }
-    
+
+
 function showMessageNotification(username, message) {
   if (
     "Notification" in window &&
@@ -251,6 +288,22 @@ let currentProfile={};
 let allUsers=[];  
 let activeChatId=null;  
 let unsubscribeMessages=null;
+    const messaging = getMessaging(getApp());
+    // ===== FOREGROUND FCM NOTIFICATION =====
+
+onMessage(messaging, (payload) => {
+  console.log("FCM message received:", payload);
+
+  const title = payload.notification?.title || "ConnectChat";
+  const body = payload.notification?.body || "Naya message aaya hai 💬";
+
+  if (Notification.permission === "granted") {
+    new Notification(title, {
+      body: body,
+      icon: "./icon-192.png"
+    });
+  }
+});
 
 // WebRTC direct file transfer (5 MB limit; both users should keep chat open)
 let peerConnection=null;
