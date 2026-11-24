@@ -1301,6 +1301,7 @@ if (msg.senderId !== currentUser.uid && !msg.deliveredAt) {
   }).catch(error => console.error("Delivery update error:", error));
     }
   const bubble=document.createElement("div");
+  bubble.dataset.messageId = messageDoc.id;
   bubble.className="msg "+(
     msg.senderId===currentUser.uid?"mine":"theirs"
   );
@@ -1310,10 +1311,31 @@ if (msg.senderId !== currentUser.uid && !msg.deliveredAt) {
 if (msg.replyTo) {
   const replyBox = document.createElement("div");
   replyBox.style.cssText =
-    "padding:6px;margin-bottom:6px;border-left:3px solid #2196F3;background:#00000010;border-radius:5px;font-size:12px;";
+    "padding:6px;margin-bottom:6px;border-left:3px solid #2196F3;background:#00000010;border-radius:5px;font-size:12px;cursor:pointer;";
 
   replyBox.textContent =
     msg.replyTo.username + ": " + msg.replyTo.text;
+
+  // Original message par scroll aur highlight
+  replyBox.onclick = () => {
+    const originalBubble = messagesDiv.querySelector(
+      `[data-message-id="${msg.replyTo.id}"]`
+    );
+
+    if (originalBubble) {
+      originalBubble.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+
+      originalBubble.style.transition = "background 0.3s";
+      originalBubble.style.background = "#facc15";
+
+      setTimeout(() => {
+        originalBubble.style.background = "";
+      }, 2000);
+    }
+  };
 
   bubble.prepend(replyBox);
     }
