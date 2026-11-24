@@ -1252,6 +1252,23 @@ firstMessagesLoad=false;
 
 snapshot.forEach(messageDoc=>{
   const msg=messageDoc.data();
+// Receiver ke chat kholne par message delivered aur seen mark karo
+if (msg.senderId !== currentUser.uid) {
+  const updates = {};
+
+  if (!msg.deliveredAt) {
+    updates.deliveredAt = serverTimestamp();
+  }
+
+  if (!msg.seenAt) {
+    updates.seenAt = serverTimestamp();
+  }
+
+  if (Object.keys(updates).length > 0) {
+    updateDoc(messageDoc.ref, updates)
+      .catch(error => console.error("Read status error:", error));
+  }
+    }
 
   const bubble=document.createElement("div");
   bubble.className="msg "+(
@@ -1305,7 +1322,25 @@ snapshot.forEach(messageDoc=>{
       });
     });
   }
+// Message tick status
+if (msg.senderId === currentUser.uid) {
+  const tick = document.createElement("span");
 
+  if (msg.seenAt) {
+    tick.textContent = " ✓✓";
+    tick.style.color = "#2196F3";
+  } else if (msg.deliveredAt) {
+    tick.textContent = " ✓✓";
+    tick.style.color = "#999999";
+  } else {
+    tick.textContent = " ✓";
+    tick.style.color = "#999999";
+  }
+
+  tick.style.fontSize = "12px";
+  tick.style.marginLeft = "6px";
+  bubble.appendChild(tick);
+    }
   messagesDiv.appendChild(bubble);
 });
 
@@ -1377,7 +1412,9 @@ sendForm.onsubmit=async event=>{
       text,  
       senderId:currentUser.uid,  
       senderUsername:currentProfile.username||"User",  
-      createdAt:serverTimestamp()  
+      createdAt:serverTimestamp(),
+deliveredAt:null,
+seenAt:null
     });  
     await updateDoc(chatRef,{  
       lastMessage:text,  
