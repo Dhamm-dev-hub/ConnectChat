@@ -1239,7 +1239,7 @@ function addCallTracks(){
         callerUid: currentUser.uid,
         calleeUid: activePeerUid,
         type: type,
-        status: "creating",,
+        status: "creating",
         createdAt: serverTimestamp()
       }
     );
@@ -1283,11 +1283,27 @@ function addCallTracks(){
 
 });
 
-  }catch(error){
+    }catch(error){
     console.error("Start call error:",error);
-    alert("Call start nahi ho payi.");
-  }
+
+    if(callLocalStream){
+      callLocalStream.getTracks().forEach(track=>track.stop());
+      callLocalStream = null;
     }
+
+    if(callPeerConnection){
+      callPeerConnection.close();
+      callPeerConnection = null;
+    }
+
+    currentCallId = null;
+    currentCallType = null;
+
+    document.getElementById("endCallBtn").style.display = "none";
+
+    alert("Call start nahi ho payi.");
+    }
+    
     function listenForIncomingCalls(){
 
   if(unsubscribeIncomingCalls){
@@ -1500,13 +1516,16 @@ async function startFileTransfer(file){
   activePeerUid=peerUid;
   isCaller=true;
   const signalsRef=collection(db,"chats",activeChatId,"signals");
-  const signalDoc=await addDoc(signalsRef,{callerUid:currentUser.uid,calleeUid:activePeerUid,status:"offering",createdAt:serverTimestamp()});
+  const signalDoc=await addDoc(signalsRef,{callerUid:currentUser.uid,calleeUid:activePeerUid,status:"creating",createdAt:serverTimestamp()});
   currentSignalId=signalDoc.id;
   createPeerConnection();
   dataChannel=peerConnection.createDataChannel("file-transfer");setupDataChannel();
   listenRemoteCandidates();
   const offer=await peerConnection.createOffer();await peerConnection.setLocalDescription(offer);
-  await updateDoc(signalDoc,{offer:{type:offer.type,sdp:offer.sdp}});
+await updateDoc(signalDoc,{
+  offer:{type:offer.type,sdp:offer.sdp},
+  status:"offering"
+});
   unsubscribeSignal=onSnapshot(signalDoc,async snap=>{
     const data=snap.data();
     if(data?.answer&&!peerConnection.currentRemoteDescription){
@@ -1949,6 +1968,10 @@ if (msg.senderId === currentUser.uid) {
   replyPreviewText.textContent = "";
 };  
 backBtn.onclick=()=>{
+  if(unsubscribeIncomingCalls){
+  unsubscribeIncomingCalls();
+  unsubscribeIncomingCalls=null;
+    }
   stopWebRTC();
   fileInput.value="";filePreview.textContent="";
   chatView.style.display="none";  
