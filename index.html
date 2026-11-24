@@ -487,6 +487,14 @@ footer {
   </form>  
   <div id="filePreview" style="font-size:13px;margin-top:8px;overflow-wrap:anywhere"></div>
   <audio id="remoteAudio" autoplay></audio>
+  <button
+  type="button"
+  id="endCallBtn"
+  onclick="endCall()"
+  style="display:none;background:#e53935;color:white;border:none;padding:10px 18px;border-radius:8px;margin:10px;"
+>
+  📴 End Call
+  </button>
 
 <video
   id="remoteVideo"
@@ -572,7 +580,20 @@ const profileView=document.getElementById("profileView");
 const backBtn=document.getElementById("backBtn");  
 const audioCallBtn = document.getElementById("audioCallBtn");
 const videoCallBtn = document.getElementById("videoCallBtn");
-const profileBackBtn=document.getElementById("profileBackBtn");  
+const profileBackBtn=document.getElementById("profileBackBtn"); 
+    // ---------- AUDIO / VIDEO CALL BUTTONS ----------
+
+if(audioCallBtn){
+  audioCallBtn.addEventListener("click",()=>{
+    startCall("audio");
+  });
+}
+
+if(videoCallBtn){
+  videoCallBtn.addEventListener("click",()=>{
+    startCall("video");
+  });
+ }
 const chatUsername=document.getElementById("chatUsername");  
 const messagesDiv=document.getElementById("messages");  
 const sendForm=document.getElementById("sendForm");  
@@ -739,6 +760,14 @@ let pendingRemoteCandidates=[];
 let receivedFileMeta=null;
 let receivedFileChunks=[];
 let receivedFileBytes=0;
+let callPeerConnection = null;
+let currentCallId = null;
+let isCallCaller = false;
+let callLocalStream = null;
+let callRemoteStream = null;
+let unsubscribeCallDoc = null;
+let unsubscribeCallCandidates = null;
+let unsubscribeIncomingCalls = null;
 const MAX_FILE_SIZE=5*1024*1024;
 const FILE_CHUNK_SIZE=16*1024;
 const rtcConfig={iceServers:[{urls:"stun:stun.l.google.com:19302"}]};
@@ -1071,27 +1100,7 @@ function createPeerConnection(){
       remoteVideo.srcObject=remoteStream;
     }
   };
-  // Audio/Video call ke liye remote stream
-peerConnection.ontrack=(event)=>{
-  if(!remoteStream){
-    remoteStream=new MediaStream();
-  }
 
-  event.streams[0].getTracks().forEach(track=>{
-    remoteStream.addTrack(track);
-  });
-
-  const remoteAudio=document.getElementById("remoteAudio");
-  const remoteVideo=document.getElementById("remoteVideo");
-
-  if(remoteAudio){
-    remoteAudio.srcObject=remoteStream;
-  }
-
-  if(remoteVideo){
-    remoteVideo.srcObject=remoteStream;
-  }
-};
   peerConnection.onicecandidate=async(event)=>{
     if(event.candidate){await saveIceCandidate(event.candidate,isCaller?"callerCandidates":"calleeCandidates");}
   };
@@ -1103,26 +1112,337 @@ peerConnection.ontrack=(event)=>{
 }
 async function getCallMedia(type){
   try{
-    localStream=await navigator.mediaDevices.getUserMedia({
+    callLocalStream=await navigator.mediaDevices.getUserMedia({
       audio:true,
       video:type==="video"
     });
 
-    return localStream;
+    return callLocalStream;
 
   }catch(error){
     console.error("Media access error:",error);
     alert("Microphone ya Camera permission nahi mili.");
     throw error;
   }
-    }
-    function addCallTracks(){
-  if(!localStream || !peerConnection)return;
+}
 
-  localStream.getTracks().forEach(track=>{
-    peerConnection.addTrack(track,localStream);
+function addCallTracks(){
+  if(!callLocalStream || !callPeerConnection)return;
+
+  callLocalStream.getTracks().forEach(track=>{
+    callPeerConnection.addTrack(track,callLocalStream);
   });
+    }
+    function createCallPeerConnection(){
+
+  callPeerConnection = new RTCPeerConnection(rtcConfig);
+
+  callRemoteStream = new MediaStream();
+
+  callPeerConnection.ontrack = (event) => {
+
+    callRemoteStream.addTrack(event.track);
+
+    const remoteAudio = document.getElementById("remoteAudio");
+    const remoteVideo = document.getElementById("remoteVideo");
+
+    if(remoteAudio){
+      remoteAudio.srcObject = callRemoteStream;
+    }
+
+    if(remoteVideo){
+      remoteVideo.srcObject = callRemoteStream;
+      remoteVideo.style.display =
+        currentCallType === "video" ? "block" : "none";
+    }
+  };
+
+  callPeerConnection.onicecandidate = async (event) => {
+
+    if(event.candidate && currentCallId && activeChatId){
+
+      const collectionName = isCallCaller
+        ? "callerCandidates"
+        : "calleeCandidates";
+
+      await addDoc(
+        collection(db,"chats",activeChatId,"calls",currentCallId,collectionName),
+        event.candidate.toJSON()
+      );
+    }
+  };
+
+  callPeerConnection.onconnectionstatechange = () => {
+    console.log("Call connection:",callPeerConnection?.connectionState);
+  };
+
+  return callPeerConnection;
+    }
+    function listenForCallCandidates(){
+
+  if(unsubscribeCallCandidates){
+    unsubscribeCallCandidates();
   }
+
+  const collectionName = isCallCaller
+    ? "calleeCandidates"
+    : "callerCandidates";
+
+  const candidatesRef = collection(
+    db,
+    "chats",
+    activeChatId,
+    "calls",
+    currentCallId,
+    collectionName
+  );
+
+  unsubscribeCallCandidates = onSnapshot(
+    candidatesRef,
+    async snapshot => {
+
+      for(const change of snapshot.docChanges()){
+
+        if(change.type !== "added") continue;
+
+        try{
+          await callPeerConnection.addIceCandidate(
+            new RTCIceCandidate(change.doc.data())
+          );
+        }catch(error){
+          console.error("Call ICE error:",error);
+        }
+      }
+    }
+  );
+    }
+    async function startCall(type){
+
+  if(!activeChatId || !activePeerUid){
+    alert("Pehle chat open karo.");
+    return;
+  }
+
+  try{
+    currentCallType = type;
+    document.getElementById("endCallBtn").style.display = "inline-block";
+    isCallCaller = true;
+
+    await getCallMedia(type);
+
+    createCallPeerConnection();
+    addCallTracks();
+
+    const callRef = await addDoc(
+      collection(db,"chats",activeChatId,"calls"),
+      {
+        callerUid: currentUser.uid,
+        calleeUid: activePeerUid,
+        type: type,
+        status: "ringing",
+        createdAt: serverTimestamp()
+      }
+    );
+
+    currentCallId = callRef.id;
+
+    const offer = await callPeerConnection.createOffer();
+
+    await callPeerConnection.setLocalDescription(offer);
+
+    await updateDoc(callRef,{
+      offer: {
+        type: offer.type,
+        sdp: offer.sdp
+      }
+    });
+
+   unsubscribeCallDoc = onSnapshot(callRef,async snapshot=>{
+
+  const data = snapshot.data();
+
+  if(!data || !callPeerConnection) return;
+
+  // सामने वाले ने call reject या end कर दी
+  if(data.status === "rejected" || data.status === "ended"){
+    alert(data.status === "rejected"
+      ? "Call reject kar di gayi."
+      : "Call end ho gayi.");
+
+    endCall(true);
+    return;
+  }
+
+  // सामने वाले का answer मिल गया
+  if(data.answer && !callPeerConnection.currentRemoteDescription){
+
+    await callPeerConnection.setRemoteDescription(
+      new RTCSessionDescription(data.answer)
+    );
+
+    listenForCallCandidates();
+  }
+
+});
+
+  }catch(error){
+    console.error("Start call error:",error);
+    alert("Call start nahi ho payi.");
+  }
+    }
+    function listenForIncomingCalls(){
+
+    
+function listenForIncomingCalls(){
+
+  if(unsubscribeIncomingCalls){
+    unsubscribeIncomingCalls();
+  }
+
+  if(!activeChatId || !activePeerUid)return;
+
+  const callsRef = collection(db,"chats",activeChatId,"calls");
+
+  const q = query(
+    callsRef,
+    where("callerUid","==",activePeerUid),
+    where("calleeUid","==",currentUser.uid),
+    where("status","==","ringing")
+  );
+
+  unsubscribeIncomingCalls = onSnapshot(q,snapshot=>{
+
+    snapshot.docChanges().forEach(async change=>{
+
+      if(change.type !== "added")return;
+
+      const callDoc = change.doc;
+      const callData = callDoc.data();
+
+      const accept = confirm(
+        "Incoming "+callData.type+" call. Accept karna hai?"
+      );
+
+      if(accept){
+        await acceptIncomingCall(callDoc);
+      }else{
+        await updateDoc(callDoc.ref,{
+          status:"rejected"
+        });
+      }
+
+    });
+  });
+}
+
+async function acceptIncomingCall(callDoc){
+
+  try{
+    const callData = callDoc.data();
+
+    currentCallId = callDoc.id;
+    currentCallType = callData.type;
+    document.getElementById("endCallBtn").style.display = "inline-block";
+    isCallCaller = false;
+
+    await getCallMedia(currentCallType);
+
+    createCallPeerConnection();
+    addCallTracks();
+
+    await callPeerConnection.setRemoteDescription(
+      new RTCSessionDescription(callData.offer)
+    );
+
+    listenForCallCandidates();
+
+    const answer = await callPeerConnection.createAnswer();
+
+    await callPeerConnection.setLocalDescription(answer);
+
+    await updateDoc(callDoc.ref,{
+  answer:{
+    type:answer.type,
+    sdp:answer.sdp
+  },
+  status:"answered"
+});
+
+unsubscribeCallDoc = onSnapshot(callDoc.ref, snapshot => {
+
+  const data = snapshot.data();
+
+  if(data && data.status === "ended"){
+    endCall(true);
+    alert("Call doosre user ne end kar di.");
+  }
+
+});
+  }catch(error){
+    console.error("Accept call error:",error);
+    alert("Call accept nahi ho payi.");
+  }
+    }
+      
+async function endCall(silent=false){
+
+  try{
+
+    if(currentCallId && activeChatId){
+      await updateDoc(
+        doc(db,"chats",activeChatId,"calls",currentCallId),
+        {status:"ended"}
+      );
+    }
+
+  }catch(error){
+    console.error("End call error:",error);
+  }
+
+  if(unsubscribeCallDoc){
+    unsubscribeCallDoc();
+    unsubscribeCallDoc = null;
+  }
+
+  if(unsubscribeCallCandidates){
+    unsubscribeCallCandidates();
+    unsubscribeCallCandidates = null;
+  }
+
+  if(callPeerConnection){
+    callPeerConnection.close();
+    callPeerConnection = null;
+  }
+
+  if(callLocalStream){
+    callLocalStream.getTracks().forEach(track=>track.stop());
+    callLocalStream = null;
+  }
+
+  callRemoteStream = null;
+  currentCallId = null;
+  currentCallType = null;
+  const endCallBtn = document.getElementById("endCallBtn");
+if(endCallBtn){
+  endCallBtn.style.display = "none";
+    }
+
+  const remoteAudio = document.getElementById("remoteAudio");
+  const remoteVideo = document.getElementById("remoteVideo");
+
+  if(remoteAudio){
+    remoteAudio.srcObject = null;
+  }
+
+  if(remoteVideo){
+    remoteVideo.srcObject = null;
+    remoteVideo.style.display = "none";
+  }
+
+if(!silent){
+  alert("Call ended.");
+    }
+    
 function setupDataChannel(){
   if(!dataChannel)return;
   dataChannel.binaryType="arraybuffer";
@@ -1248,6 +1568,10 @@ async function openChat(person){
   stopWebRTC();
   activePeerUid=person.uid;
   activeChatId=[currentUser.uid,person.uid].sort().join("_");
+
+  // Incoming call listener
+  listenForIncomingCalls();
+  
     // Purane chat ka typing listener band karo
   if (typingListener) {
     typingListener();
