@@ -766,9 +766,9 @@ async function openChat(person){
         });
       }
 
-      firstMessagesLoad=false;
+     
+firstMessagesLoad=false;
 
-      
 snapshot.forEach(messageDoc=>{
   const msg=messageDoc.data();
 
@@ -779,52 +779,57 @@ snapshot.forEach(messageDoc=>{
 
   bubble.textContent=msg.text||"";
 
-  // Sirf apne message par 2 second long press
+  // Apne message par touch/click karne se Delete option
   if(msg.senderId===currentUser.uid){
 
-    let pressTimer=null;
-    let longPressTriggered=false;
+    bubble.style.cursor="pointer";
 
-    const startPress=()=>{
-      longPressTriggered=false;
+    bubble.addEventListener("click",()=>{
 
-      pressTimer=setTimeout(()=>{
-        longPressTriggered=true;
+      const oldMenu=document.getElementById("messageDeleteMenu");
+      if(oldMenu) oldMenu.remove();
 
+      const menu=document.createElement("button");
+      menu.id="messageDeleteMenu";
+      menu.textContent="🗑️ Delete message";
+
+      menu.style.display="block";
+      menu.style.marginTop="6px";
+      menu.style.padding="9px 14px";
+      menu.style.border="none";
+      menu.style.borderRadius="8px";
+      menu.style.background="#dc2626";
+      menu.style.color="#ffffff";
+      menu.style.cursor="pointer";
+
+      bubble.after(menu);
+
+      menu.addEventListener("click",async()=>{
         const confirmDelete=confirm(
           "Kya tum ye message permanently delete karna chahte ho?"
         );
 
         if(confirmDelete){
-          deleteDoc(
-            doc(db,"chats",activeChatId,"messages",messageDoc.id)
-          ).then(()=>{
-            console.log("Message permanently deleted");
-          }).catch(error=>{
-            console.error("Delete error:",error);
+          try{
+            await deleteDoc(
+              doc(db,"chats",activeChatId,"messages",messageDoc.id)
+            );
+          }catch(error){
+            console.error(error);
             alert("Message delete nahi hua: "+error.message);
-          });
+          }
         }
-      },2000);
-    };
 
-    const cancelPress=()=>{
-      clearTimeout(pressTimer);
-    };
-
-    bubble.addEventListener("touchstart",startPress);
-    bubble.addEventListener("touchend",cancelPress);
-    bubble.addEventListener("touchmove",cancelPress);
-
-    bubble.addEventListener("mousedown",startPress);
-    bubble.addEventListener("mouseup",cancelPress);
-    bubble.addEventListener("mouseleave",cancelPress);
+        menu.remove();
+      });
+    });
   }
 
   messagesDiv.appendChild(bubble);
 });
 
-      messagesDiv.scrollTop=messagesDiv.scrollHeight;
+messagesDiv.scrollTop=messagesDiv.scrollHeight;
+
 
     },error=>{
       console.error(error);
