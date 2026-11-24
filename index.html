@@ -471,6 +471,11 @@ footer {
   <div id="messages">  
     <div class="status">Messages load ho rahe hain...</div>  
   </div>  
+  <div id="replyPreview" style="display:none; padding:10px; margin-bottom:8px; background:#e8f0fe; border-left:4px solid #2196F3; border-radius:8px;">
+  <div style="font-size:12px; color:#2196F3; font-weight:bold;">Replying to</div>
+  <div id="replyPreviewText" style="font-size:14px; overflow-wrap:anywhere;"></div>
+  <button type="button" id="cancelReplyBtn" style="float:right;">✕</button>
+  </div>
   <form id="sendForm">  
     <input id="messageInput" type="text" placeholder="Message likho..." autocomplete="off" maxlength="2000" required>  
     <button type="button" id="attachBtn">📎</button>
@@ -558,7 +563,10 @@ const profileBackBtn=document.getElementById("profileBackBtn");
 const chatUsername=document.getElementById("chatUsername");  
 const messagesDiv=document.getElementById("messages");  
 const sendForm=document.getElementById("sendForm");  
-const messageInput=document.getElementById("messageInput");  
+const messageInput=document.getElementById("messageInput");
+const replyPreview=document.getElementById("replyPreview");
+const replyPreviewText=document.getElementById("replyPreviewText");
+const cancelReplyBtn=document.getElementById("cancelReplyBtn");
 const sendBtn=document.getElementById("sendBtn");  
 const chatError=document.getElementById("chatError");
 const attachBtn=document.getElementById("attachBtn");
@@ -684,6 +692,7 @@ let allUsers=[];
 let activeChatId=null;  
 let unsubscribeMessages=null;
 let seenObserver = null;
+let replyToMessage = null;
 let typingListener = null;
 let typingTimer = null;
     const messaging = getMessaging(getApp());
@@ -1297,57 +1306,133 @@ if (msg.senderId !== currentUser.uid && !msg.deliveredAt) {
   );
 
   bubble.textContent=msg.text||"";
+  // Replied message ka preview bubble mein dikhana
+if (msg.replyTo) {
+  const replyBox = document.createElement("div");
+  replyBox.style.cssText =
+    "padding:6px;margin-bottom:6px;border-left:3px solid #2196F3;background:#00000010;border-radius:5px;font-size:12px;";
+
+  replyBox.textContent =
+    msg.replyTo.username + ": " + msg.replyTo.text;
+
+  bubble.prepend(replyBox);
+    }
   // Incoming message ko Seen Observer se connect karo
 if (msg.senderId !== currentUser.uid && !msg.seenAt) {
   bubble.dataset.messageRef = messageDoc.ref.path;
   seenObserver.observe(bubble);
     }
+  // Message par Reply option
+bubble.addEventListener("contextmenu", event => {
+  event.preventDefault();
 
-  // Apne message par touch/click karne se Delete option
-  if(msg.senderId===currentUser.uid){
+  replyToMessage = {
+    id: messageDoc.id,
+    text: msg.text || "",
+    username: msg.senderUsername || "User"
+  };
 
-    bubble.style.cursor="pointer";
+  replyPreviewText.textContent =
+    replyToMessage.username + ": " + replyToMessage.text;
 
-    bubble.addEventListener("click",()=>{
+  replyPreview.style.display = "block";
+  messageInput.focus();
+});
 
-      const oldMenu=document.getElementById("messageDeleteMenu");
-      if(oldMenu) oldMenu.remove();
+// Message par single click se dropdown menu
+bubble.style.cursor = "pointer";
 
-      const menu=document.createElement("button");
-      menu.id="messageDeleteMenu";
-      menu.textContent="🗑️ Delete message";
+bubble.addEventListener("click", () => {
+  const oldMenu = document.getElementById("messageActionMenu");
+  if (oldMenu) oldMenu.remove();
 
-      menu.style.display="block";
-      menu.style.marginTop="6px";
-      menu.style.padding="9px 14px";
-      menu.style.border="none";
-      menu.style.borderRadius="8px";
-      menu.style.background="#dc2626";
-      menu.style.color="#ffffff";
-      menu.style.cursor="pointer";
+  const menu = document.createElement("div");
+  menu.id = "messageActionMenu";
 
-      bubble.after(menu);
+  menu.style.cssText = `
+    display:flex;
+    gap:6px;
+    margin-top:6px;
+    padding:6px;
+    background:#ffffff;
+    border:1px solid #ddd;
+    border-radius:10px;
+    width:max-content;
+    box-shadow:0 2px 8px #0002;
+  `;
 
-      menu.addEventListener("click",async()=>{
-        const confirmDelete=confirm(
-          "Kya tum ye message permanently delete karna chahte ho?"
-        );
+  // Reply button
+  const replyBtn = document.createElement("button");
+  replyBtn.textContent = "↩️ Reply";
 
-        if(confirmDelete){
-          try{
-            await deleteDoc(
-              doc(db,"chats",activeChatId,"messages",messageDoc.id)
-            );
-          }catch(error){
-            console.error(error);
-            alert("Message delete nahi hua: "+error.message);
-          }
+  replyBtn.style.cssText = `
+    border:none;
+    background:#2563eb;
+    color:white;
+    padding:8px 12px;
+    border-radius:7px;
+  `;
+
+  replyBtn.onclick = () => {
+    replyToMessage = {
+      id: messageDoc.id,
+      text: msg.text || "",
+      username: msg.senderUsername || "User"
+    };
+
+    replyPreviewText.textContent =
+      replyToMessage.username + ": " + replyToMessage.text;
+
+    replyPreview.style.display = "block";
+    messageInput.focus();
+    menu.remove();
+  };
+
+  menu.appendChild(replyBtn);
+
+  // Delete button sirf apne message par
+  if (msg.senderId === currentUser.uid) {
+    const deleteBtn = document.createElement("button");
+    deleteBtn.textContent = "🗑️ Delete";
+
+    deleteBtn.style.cssText = `
+      border:none;
+      background:#dc2626;
+      color:white;
+      padding:8px 12px;
+      border-radius:7px;
+    `;
+
+    deleteBtn.onclick = async () => {
+      if (confirm("Kya tum ye message permanently delete karna chahte ho?")) {
+        try {
+          await deleteDoc(
+            doc(db, "chats", activeChatId, "messages", messageDoc.id)
+          );
+        } catch (error) {
+          console.error(error);
+          alert("Message delete nahi hua: " + error.message);
         }
+      }
 
-        menu.remove();
-      });
-    });
+      menu.remove();
+    };
+
+    menu.appendChild(deleteBtn);
   }
+
+  bubble.after(menu);
+
+  // Chat mein doosri jagah click karne par menu band
+setTimeout(() => {
+  document.addEventListener("click", function closeMessageMenu(event) {
+    if (!menu.contains(event.target)) {
+      menu.remove();
+      document.removeEventListener("click", closeMessageMenu);
+    }
+  });
+}, 0);
+  });
 // Message tick status
 if (msg.senderId === currentUser.uid) {
   const tick = document.createElement("span");
@@ -1388,7 +1473,12 @@ if (msg.senderId === currentUser.uid) {
     messagesDiv.innerHTML='<div class="status">Chat load nahi ho saki.</div>';  
   }  
 }  
-  
+
+  cancelReplyBtn.onclick = () => {
+  replyToMessage = null;
+  replyPreview.style.display = "none";
+  replyPreviewText.textContent = "";
+};  
 backBtn.onclick=()=>{
   stopWebRTC();
   fileInput.value="";filePreview.textContent="";
@@ -1445,13 +1535,21 @@ sendForm.onsubmit=async event=>{
       senderUsername:currentProfile.username||"User",  
       createdAt:serverTimestamp(),
 deliveredAt:null,
-seenAt:null
+seenAt:null,
+      replyTo: replyToMessage ? {
+  id: replyToMessage.id,
+  text: replyToMessage.text,
+  username: replyToMessage.username
+} : null,
     });  
     await updateDoc(chatRef,{  
       lastMessage:text,  
       updatedAt:serverTimestamp()  
     });  
     messageInput.value="";  
+    replyToMessage = null;
+replyPreview.style.display = "none";
+replyPreviewText.textContent = "";
     clearTimeout(typingTimer);
 
 set(
