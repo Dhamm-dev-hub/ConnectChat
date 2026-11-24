@@ -53,10 +53,15 @@ footer{text-align:center;color:#888;padding:18px;font-size:13px}
     <button id="logoutBtn">Logout</button>  
   </div>  
 </header>  <main class="container">  <!-- HOME -->  <div id="listView">  
+  <div class="card">
+  <h2>Welcome to ConnectChat!</h2>
+  <div id="profileName">Loading...</div>
+
+  <button id="enableNotificationsBtn" onclick="enableChatNotifications()">
+    🔔 Enable Notifications
+  </button>
+</div>
   <div class="card">  
-    <h2>Welcome to ConnectChat!</h2>  
-    <div id="profileName">Loading...</div>  
-  </div>    <div class="card">  
     <h3>💬 Recent Chats</h3>  
     <div id="recentChats" class="status">Chats load ho rahi hain...</div>  
   </div>    <div class="card">  
