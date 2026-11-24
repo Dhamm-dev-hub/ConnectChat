@@ -52,13 +52,13 @@ footer{text-align:center;color:#888;padding:18px;font-size:13px}
     <button id="profileBtn">👤 Profile</button>  
     <button id="logoutBtn">Logout</button>  
   </div>  
-</header>  <main class="container">  <!-- HOME -->  <div id="listView">  
+</header>  <ma<in class="container">  <!-- HOME -->  <div id="listView">  
   <div class="card">
   <h2>Welcome to ConnectChat!</h2>
   <div id="profileName">Loading...</div>
 
-  <button id="enableNotificationsBtn" onclick="enableChatNotifications()">
-    🔔 Enable Notifications
+<button id="enableNotificationsBtn">
+    🔔 Enable Notifications 
   </button>
 </div>
   <div class="card">  
@@ -218,7 +218,11 @@ async function enableChatNotifications() {
     alert("Notification permission allow nahi hui.");
   }
 }
+const enableNotificationsBtn =
+  document.getElementById("enableNotificationsBtn");
 
+enableNotificationsBtn.addEventListener("click", enableChatNotifications);
+    
 function showMessageNotification(username, message) {
   if (
     "Notification" in window &&
