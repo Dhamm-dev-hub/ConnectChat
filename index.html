@@ -683,7 +683,8 @@ let currentProfile={};
 let allUsers=[];  
 let activeChatId=null;  
 let unsubscribeMessages=null;
-    let typingListener = null;
+let seenObserver = null;
+let typingListener = null;
 let typingTimer = null;
     const messaging = getMessaging(getApp());
     // ===== FOREGROUND FCM NOTIFICATION =====
@@ -1218,6 +1219,28 @@ typingListener = onValue(typingRef, snapshot => {
       collection(db,"chats",activeChatId,"messages"),  
       orderBy("createdAt","asc")  
     );  
+    if (seenObserver) {
+  seenObserver.disconnect();
+}
+
+seenObserver = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const messageRef = entry.target.dataset.messageRef;
+
+      if (messageRef) {
+        updateDoc(doc(db, messageRef), {
+          seenAt: serverTimestamp()
+        }).catch(error => console.error("Seen update error:", error));
+      }
+
+      seenObserver.unobserve(entry.target);
+    }
+  });
+}, {
+  root: messagesDiv,
+  threshold: 0.5
+});
 
         let firstMessagesLoad = true;
 
@@ -1262,30 +1285,23 @@ firstMessagesLoad=false;
 
 snapshot.forEach(messageDoc=>{
   const msg=messageDoc.data();
-// Receiver ke chat kholne par message delivered aur seen mark karo
-if (msg.senderId !== currentUser.uid) {
-  const updates = {};
-
-  if (!msg.deliveredAt) {
-    updates.deliveredAt = serverTimestamp();
-  }
-
-  if (!msg.seenAt) {
-    updates.seenAt = serverTimestamp();
-  }
-
-  if (Object.keys(updates).length > 0) {
-    updateDoc(messageDoc.ref, updates)
-      .catch(error => console.error("Read status error:", error));
-  }
+// Message delivered mark karo
+if (msg.senderId !== currentUser.uid && !msg.deliveredAt) {
+  updateDoc(messageDoc.ref, {
+    deliveredAt: serverTimestamp()
+  }).catch(error => console.error("Delivery update error:", error));
     }
-
   const bubble=document.createElement("div");
   bubble.className="msg "+(
     msg.senderId===currentUser.uid?"mine":"theirs"
   );
 
   bubble.textContent=msg.text||"";
+  // Incoming message ko Seen Observer se connect karo
+if (msg.senderId !== currentUser.uid && !msg.seenAt) {
+  bubble.dataset.messageRef = messageDoc.ref.path;
+  seenObserver.observe(bubble);
+    }
 
   // Apne message par touch/click karne se Delete option
   if(msg.senderId===currentUser.uid){
@@ -1351,6 +1367,7 @@ if (msg.senderId === currentUser.uid) {
   tick.style.marginLeft = "6px";
   bubble.appendChild(tick);
     }
+ 
   messagesDiv.appendChild(bubble);
 });
 
