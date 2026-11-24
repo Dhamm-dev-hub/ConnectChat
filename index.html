@@ -221,7 +221,15 @@ async function enableChatNotifications() {
 const enableNotificationsBtn =
   document.getElementById("enableNotificationsBtn");
 
-enableNotificationsBtn.addEventListener("click", enableChatNotifications);
+if (enableNotificationsBtn) {
+  enableNotificationsBtn.addEventListener("click", () => {
+    alert("Notification button click ho raha hai!");
+
+    enableChatNotifications();
+  });
+} else {
+  console.error("Notification button nahi mila!");
+}
     
 function showMessageNotification(username, message) {
   if (
