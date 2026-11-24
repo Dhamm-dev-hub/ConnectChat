@@ -226,9 +226,10 @@ async function enableChatNotifications() {
     }
 
     const swRegistration = await navigator.serviceWorker.register(
-      "./firebase-messaging-sw.js"
-    );
+  "./firebase-messaging-sw.js"
+);
 
+await navigator.serviceWorker.ready;
     const token = await getToken(messaging, {
       vapidKey: "BFBurjf8J-7C4x9hR4GBAsPxQkAfHSR0u45V-a9xWpJ9L2SNB3LUjcQ_xX27E64qVSGa06_Jkb3WFAXjmnWQgho",
       serviceWorkerRegistration: swRegistration
